@@ -1,0 +1,90 @@
+version: "3"
+services:
+  w8t-service:
+    container_name: w8t-service
+    image: docker.io/cairry/watchalert:latest
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ../../config/config.yaml:/app/config/config.yaml
+    restart: always
+    privileged: true
+    ports:
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:9001/hello"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+    depends_on:
+      - w8t-mysql
+      - w8t-redis
+    networks:
+      - w8t
+
+  w8t-web:
+    container_name: w8t-web
+    image: docker.io/cairry/watchalert-web:latest
+    environment:
+      - TZ=Asia/Shanghai
+    restart: always
+    privileged: true
+    ports:
+      - "80:80"
+    networks:
+      - w8t
+
+  w8t-redis:
+    container_name: w8t-redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    volumes:
+      - ./redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: always
+    networks:
+      - w8t
+
+
+  w8t-mysql:
+    container_name: w8t-mysql
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in a local .env}
+      - MYSQL_DATABASE=watchalert
+    restart: always
+    networks:
+      - w8t
+
+  #必须在服务启动创建表后再导入数据
+  init-mysql:
+    container_name: init-mysql
+    image: mysql:8.0
+    volumes:
+      -  ../helmchart/files/sql:/sql
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_HOST=w8t-mysql
+      - MYSQL_USERNAME=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in a local .env}
+      - MYSQL_DATABASE=watchalert
+    restart: on-failure
+    command: ["sh", "-c", "chmod +x /sql/auto_import.sh; /sql/auto_import.sh"]
+    depends_on:
+      - w8t-mysql
+      - w8t-service
+    networks:
+      - w8t
+
+networks:
+  w8t:
+    driver: bridge

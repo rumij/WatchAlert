@@ -1,0 +1,176 @@
+package repo
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+	"watchAlert/internal/models"
+	"watchAlert/pkg/tools"
+
+	"github.com/zeromicro/go-zero/core/logc"
+	"gorm.io/gorm"
+)
+
+type (
+	DutyCalendarRepo struct {
+		entryRepo
+	}
+
+	InterDutyCalendar interface {
+		CreateCalendarInfo(data models.DutyCalendarInfo) error
+		UpdateCalendarInfo(data models.DutyCalendarInfo) error
+		DeleteCalendarInfo(dutyId string) error
+		GetCalendarInfo(dutyId string) (models.DutyCalendarInfo, error)
+		ListCalendarInfo(tenantId string) ([]models.DutyCalendarInfo, error)
+		GetCalendarData(dutyId, time string) models.DutySchedule
+		GetDutyUserData(dutyId, time string) ([]models.Member, bool)
+		Create(r models.DutySchedule) error
+		Update(r models.DutySchedule) error
+		Search(tenantId, dutyId, time string) ([]models.DutySchedule, error)
+		GetCalendarUsers(tenantId, dutyId string) ([][]models.DutyUser, error)
+	}
+)
+
+func newDutyCalendarInterface(db *gorm.DB, g InterGormDBCli) InterDutyCalendar {
+	return &DutyCalendarRepo{
+		entryRepo{
+			g:  g,
+			db: db,
+		},
+	}
+}
+
+func (dc DutyCalendarRepo) CreateCalendarInfo(data models.DutyCalendarInfo) error {
+	return dc.db.Model(&models.DutyCalendarInfo{}).Create(data).Error
+}
+
+func (dc DutyCalendarRepo) UpdateCalendarInfo(data models.DutyCalendarInfo) error {
+	return dc.db.Model(&models.DutyCalendarInfo{}).Where("duty_id = ?", data.DutyId).Updates(data).Error
+}
+
+func (dc DutyCalendarRepo) DeleteCalendarInfo(dutyId string) error {
+	return dc.db.Where("duty_id = ?", dutyId).Delete(&models.DutyCalendarInfo{}).Error
+}
+
+func (dc DutyCalendarRepo) GetCalendarInfo(dutyId string) (models.DutyCalendarInfo, error) {
+	var calendarInfo models.DutyCalendarInfo
+	err := dc.db.Model(models.DutyCalendarInfo{}).Where("duty_id = ?", dutyId).First(&calendarInfo).Error
+	return calendarInfo, err
+}
+
+func (dc DutyCalendarRepo) ListCalendarInfo(tenantId string) ([]models.DutyCalendarInfo, error) {
+	var calendarInfos []models.DutyCalendarInfo
+	err := dc.db.Model(models.DutyCalendarInfo{}).Where("tenant_id = ?", tenantId).Find(&calendarInfos).Error
+	return calendarInfos, err
+}
+
+// GetCalendarData 获取值班表数据
+func (dc DutyCalendarRepo) GetCalendarData(dutyId, time string) models.DutySchedule {
+	var dutySchedule models.DutySchedule
+
+	dc.db.Model(models.DutySchedule{}).
+		Where("duty_id = ? AND time = ?", dutyId, time).
+		First(&dutySchedule)
+
+	return dutySchedule
+}
+
+// GetDutyUserData 获取值班用户数据
+func (dc DutyCalendarRepo) GetDutyUserData(dutyId, time string) ([]models.Member, bool) {
+	var users []models.Member
+	schedule := dc.GetCalendarData(dutyId, time)
+	for _, user := range schedule.Users {
+		var userData models.Member
+		db := dc.db.Model(models.Member{}).Where("user_id = ?", user.UserId)
+		if err := db.First(&userData).Error; err != nil {
+			logc.Error(context.Background(), "获取值班用户信息失败, msg: "+err.Error())
+			continue
+		}
+		users = append(users, userData)
+	}
+
+	if users == nil {
+		return users, false
+	}
+
+	return users, true
+}
+
+func (dc DutyCalendarRepo) Create(r models.DutySchedule) error {
+	err := dc.g.Create(models.DutySchedule{}, r)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dc DutyCalendarRepo) Update(r models.DutySchedule) error {
+	u := Updates{
+		Table: models.DutySchedule{},
+		Where: map[string]interface{}{
+			"tenant_id = ?": r.TenantId,
+			"duty_id = ?":   r.DutyId,
+			"time = ?":      r.Time,
+		},
+		Updates: r,
+	}
+
+	err := dc.g.Updates(u)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dc DutyCalendarRepo) Search(tenantId, dutyId, time string) ([]models.DutySchedule, error) {
+	var dutyScheduleList []models.DutySchedule
+	db := dc.db.Model(&models.DutySchedule{})
+
+	db.Where("tenant_id = ? AND duty_id = ? AND time LIKE ?", tenantId, dutyId, time+"%")
+	err := db.Find(&dutyScheduleList).Error
+	if err != nil {
+		return dutyScheduleList, err
+	}
+
+	return dutyScheduleList, nil
+}
+
+// GetCalendarUsers 获取值班用户
+// 只获取当前月份到月底正在值班的用户，避免已经移除过的用户仍存在值班用户列表当中；
+func (dc DutyCalendarRepo) GetCalendarUsers(tenantId, dutyId string) ([][]models.DutyUser, error) {
+	var (
+		entries      []models.DutySchedule
+		groupedUsers [][]models.DutyUser
+	)
+
+	// 获取当前年月日
+	now := time.Now().UTC()
+	currentDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	// 计算当年12月31日
+	endOfYear := time.Date(now.Year(), 12, 31, 0, 0, 0, 0, time.UTC)
+
+	db := dc.db.Model(&models.DutySchedule{})
+	db.Where("tenant_id = ? AND duty_id = ? AND status = ?", tenantId, dutyId, models.CalendarFormalStatus)
+	db.Where("time >= ? AND time <= ?", currentDate, endOfYear)
+
+	if err := db.Find(&entries).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get calendar users: %w", err)
+	}
+
+	user := make(map[string]struct{})
+	for _, entry := range entries {
+		key := tools.JsonMarshalToString(entry.Users)
+		if _, ok := user[key]; ok {
+			continue
+		}
+
+		groupedUsers = append(groupedUsers, entry.Users)
+		user[key] = struct{}{}
+	}
+
+	return groupedUsers, nil
+}

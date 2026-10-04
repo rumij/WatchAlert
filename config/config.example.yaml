@@ -1,0 +1,27 @@
+Server:
+  port: "9001"
+  # release / debug / test
+  mode: "release"
+
+Database:
+  # 数据库类型: mysql 或 sqlite (默认: mysql)
+  type: sqlite
+  # MySQL 配置 (当 type 为 mysql 时使用)
+  host: w8t-mysql
+  port: 3306
+  user: root
+  pass: "" # Set privately when using MySQL
+  dbName: watchalert
+  timeout: 10s
+  # SQLite 配置 (当 type 为 sqlite 时使用)
+  path: data/w8t.db
+
+Redis:
+  host: 127.0.0.1
+  port: 6379
+  pass: ""
+  database: 0
+
+Jwt:
+  # 失效时间
+  expire: 18000
