@@ -1,11 +1,28 @@
 <p align="center">
-  <a href="https://github.com/w8t-io/WatchAlert"> 
+  <a href="https://github.com/rumij/WatchAlert">
     <img src="WatchAlert.png" alt="cloud native monitoring" width="200" height="auto" /></a>
 </p>
 
 <p align="center">
-  <b>🌐 WatchAlert —— 云原生环境下的轻量级智能监控告警引擎</b>
+  <b>🌐 WatchAlert Zabbix 特别版 —— 支持 Zabbix API 轮询的告警中心</b>
 </p>
+
+## 本版本说明
+
+**这是专门增加 Zabbix 支持的 WatchAlert 特别版本。** 本仓库基于 [w8t-io/WatchAlert](https://github.com/w8t-io/WatchAlert) 改造，保留原有告警处理能力，增加 Zabbix 数据源、问题事件同步和恢复处理，面向使用 Zabbix 的监控环境。本版本由本仓库维护，不属于上游官方发布版本。
+
+本版通过 **Zabbix JSON-RPC API 主动轮询**接入告警，无需在 Zabbix 中配置向 WatchAlert 发送告警的 Webhook：
+
+- 同步 Zabbix 当前触发器问题到 WatchAlert 故障中心，并补充主机、触发器和标签信息。
+- 通过事件同步水位和重叠时间窗口补偿漏采事件，按稳定指纹去重。
+- 同步问题恢复及恢复时间，将 Zabbix 严重级别映射为 WatchAlert 的 `P0/P1/P2`。
+- 使用只读 Zabbix API Token，并通过 WatchAlert 现有通知渠道发送告警和恢复通知。
+
+接入方法见 [Zabbix API 轮询接入说明](docs/zabbix-api-polling.md)，离线部署流程见 [Zabbix 特别版离线部署手册](docs/WatchAlert-Zabbix-离线部署手册.md)。
+
+本仓库包含特别版的**后端源码**；前端源码和离线镜像包需另行准备。部署本版本时，请使用本仓库源码构建的后端镜像，并配合支持 Zabbix 数据源配置的前端。实际密码、API Token 和运行数据不随源码发布。
+
+以下徽章展示上游项目信息。
 
 <p align="center">
 <a href="https://github.com/w8t-io/WatchAlert/graphs/contributors">
@@ -14,7 +31,7 @@
 <img alt="GitHub forks" src="https://img.shields.io/github/forks/w8t-io/WatchAlert">
 <img alt="GitHub Repo issues" src="https://img.shields.io/github/issues/w8t-io/WatchAlert">
 <img alt="GitHub Repo issues closed" src="https://img.shields.io/github/issues-closed/w8t-io/WatchAlert">
-<img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"/>
+<a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"/></a>
 
 ## 💎 WatchAlert 是什么？
 🎯 **专注可观测性与稳定性，为运维提效降本**
@@ -35,11 +52,17 @@ WatchAlert 是一款专为云原生环境设计 的轻量级监控告警引擎�
 | Logs   | Loki、ElasticSearch、VictoriaLogs、ClickHouse、SLS（阿里云日志服务）、TLS（火山云日志服务，开发中）、CLS（腾讯云日志服务，开发中） |
 | Traces  | Jaeger                                                                                    |
 | Events  | Kubernetes 事件监控                                                                           |
+| Zabbix 告警 | Zabbix JSON-RPC API：触发器问题轮询、事件补偿和恢复同步（本特别版扩展） |
 | 网络拨测 | HTTP、ICMP、TCP、SSL                                                                         |
 | 通知渠道 | 飞书、钉钉、企业微信、邮件、自定义 Webhook、Slack                                                           |
 
 
 ## 🔍 核心亮点
+
+🔗 **Zabbix 专项支持（特别版扩展）**
+
+- 将 Zabbix 问题事件接入统一故障中心，复用 WatchAlert 的通知、值班和告警升级能力。
+- 支持配置轮询间隔、首次回溯窗口和严重级别映射，并提供 Zabbix 同步状态查询。
 
 🧠 **AI 智能分析**
 
@@ -71,9 +94,10 @@ WatchAlert 是一款专为云原生环境设计 的轻量级监控告警引擎�
 
 ## 📚 项目文档
 
-- 功能介绍：https://cairry.github.io/docs/
-- 快速部署：https://cairry.github.io/docs/install/docker.html
-- Zabbix API 轮询接入：[docs/zabbix-api-polling.md](docs/zabbix-api-polling.md)
+- Zabbix 特别版接入：[docs/zabbix-api-polling.md](docs/zabbix-api-polling.md)
+- Zabbix 特别版离线部署：[docs/WatchAlert-Zabbix-离线部署手册.md](docs/WatchAlert-Zabbix-离线部署手册.md)
+- 上游功能介绍：https://cairry.github.io/docs/
+- 上游通用部署参考：https://cairry.github.io/docs/install/docker.html
 
 
 ## 🎉 项目预览
@@ -99,7 +123,7 @@ WatchAlert 是一款专为云原生环境设计 的轻量级监控告警引擎�
 
 ## 本地配置与凭据
 
-本仓库保存后端源码，基于 [w8t-io/WatchAlert](https://github.com/w8t-io/WatchAlert) 修改，保留原项目许可证。前端和离线镜像包不包含在本仓库。
+本仓库保存支持 Zabbix 的特别版后端源码，基于 [w8t-io/WatchAlert](https://github.com/w8t-io/WatchAlert) 修改，保留原项目许可证。前端和离线镜像包不包含在本仓库。
 
 首次运行前复制配置模板：
 
