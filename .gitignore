@@ -60,3 +60,6 @@ backups/
 *.dump
 /watchAlert
 /w8t
+
+/web/build/
+/web/coverage/

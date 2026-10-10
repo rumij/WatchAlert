@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 64" role="img" aria-labelledby="title">
+  <title id="title">Zabbix</title>
+  <rect width="160" height="64" rx="12" fill="#d40000"/>
+  <path d="M25 17h54v9L43 47h37v10H23v-9l36-21H25z" fill="#fff"/>
+  <text x="91" y="43" fill="#fff" font-family="Arial, sans-serif" font-size="20" font-weight="700">Zabbix</text>
+</svg>

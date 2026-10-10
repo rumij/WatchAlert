@@ -1,0 +1,9 @@
+# 仅适用于现有本地验证项目的 backend/web 服务名。
+services:
+  backend:
+    image: watchalert-backend:${WATCHALERT_RELEASE_TAG:-zabbix-silence-20261010}
+  web:
+    image: watchalert-frontend:${WATCHALERT_RELEASE_TAG:-zabbix-silence-20261010}
+    environment:
+      WATCHALERT_BACKEND_HOST: backend
+      WATCHALERT_BACKEND_PORT: "9001"

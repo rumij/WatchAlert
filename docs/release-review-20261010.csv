@@ -1,0 +1,202 @@
+path,status,ocr_filter,disposition,reason
+.dockerignore,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+.gitignore,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/consumer/consumer.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/consumer/handle.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/consumer/upgrader.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/mute/mute.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/zabbix/syncer.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/models/silences.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/repo/silence.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/services/event.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/services/silence.go,modified,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+deploy/docker-compose/build-app-images.sh,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+deploy/docker-compose/upgrade-app.yaml,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+deploy/docker-compose/upgrade-validation.yaml,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/.dockerignore,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/Dockerfile,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/package.json,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/postcss.config.js,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/public/index.html,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/manifest.json,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/App.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/ai.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/auditLog.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/cloudwatch.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/dashboard.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/datasource.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/duty.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/event.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/faultCenter.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/kubernetes.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/notice.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/noticeTmpl.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/other.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/permissions.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/probing.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/prometheus.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/recordingRule.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/role.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/rule.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/ruleTmpl.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/settings.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/silence.jsx,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/api/tenant.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/topology.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/api/user.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/components/Breadcrumb.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/components/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/components/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/components/sider/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/context/RuleContext.js,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/index.js,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/preview/SearchViewMetricsExample.tsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/preview/searchViewLogs.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/preview/searchViewMetrics.tsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/recordingRule/create.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/recordingRule/create.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/recordingRule/createGroup.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/recordingRule/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/recordingRule/sidebar.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/create.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/createGroup.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/sidebar.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/tmpl/RuleTemplateCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/tmpl/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/tmplGroup/RuleTemplateGroupCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/tmplGroup/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/audit/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/chart/eventMetricChart.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/chart/noticeMetricChart.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/dashboards/dashboard/iframe.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/dashboards/dashboard/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/dashboards/folder/create.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/dashboards/folder/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/datasources/DatasourceCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/datasources/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/datasources/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/duty/DutyManageCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/duty/calendar/CreateCalendar.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/duty/calendar/UpdateCalendar.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/duty/calendar/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/duty/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/event/currentEvent.jsx,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/pages/event/historyEvent.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/event/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/event/tmpl/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/exploer/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/create.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/detail.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/notify.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/faultCenter/upgrade.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/global.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/home.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/home.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/login.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/members/role/UserRoleCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/members/role/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/members/user/UserChangePass.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/members/user/UserCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/members/user/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/NoticeObjectCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/history.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/notification-type-icon.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/tmpl/NoticeTemplateCreateModal.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/tmpl/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/create.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/create.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/detail.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/probing/once.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/profile/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/sd/createGroup.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/sd/createService.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/sd/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/sd/sidebar.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/promethues/sd/versionHistory.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/settings/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/settings/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/silence/SilenceRuleCreateModal.jsx,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/pages/silence/index.jsx,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/pages/silence/silencePresets.js,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/pages/tenant/CreateTenant.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/detail.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/index.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/quota.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/security.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/tenant/users.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/routes/index.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/setupProxy.js,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/Auth.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/Error.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/JsonTable.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/MarkdownRenderer.css,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/MarkdownRenderer.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/SafeDiffEditor.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/See.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/TableWithPagination.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/VSCodeEditor.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/copyToClipboard.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/exportAlarmRecordToHTML.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/http.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/lib.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/utils/sqlEditor.jsx,added,reviewable,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/tailwind.config.js,added,reviewable,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+README.md,modified,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/consumer/handle_test.go,modified,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/zabbix/syncer_test.go,modified,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+alert/mute/mute_test.go,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+docs/container-upgrade-20261010.md,added,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+docs/release-review-20261010.csv,added,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+docs/release-review-20261010.md,added,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/models/silences_test.go,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/repo/silence_test.go,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+internal/services/silence_test.go,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/README.md,added,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/nginx/default.conf.template,added,unsupported_ext,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/package-lock.json,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/public/favicon-v1.ico,binary,binary,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/favicon.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/logo192.png,binary,binary,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/logo512.png,binary,binary,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/robots.txt,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/public/watchalert-logo-simple.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/img/github_logo.png,binary,binary,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/img/health.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/img/logo-v1.jpeg,binary,binary,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/img/logo.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/assets/event.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/assets/log.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/assets/metric.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/assets/trace.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/AWSlogo.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/ElasticSearch.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/Kubernetes.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/L.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/Prometheus.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/Zabbix.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/alicloud.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/clickhouse.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/jaeger.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/alert/rule/img/victorialogs.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/Email.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/dingding.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/feishu.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/phone.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/qywechat.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/slack.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/sms.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/sreflow.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/notice/img/webhook.svg,added,unsupported_ext,skipped,导入且未改的前端基线，未做全文件业务审计；整体构建及凭据扫描覆盖
+web/src/pages/silence/SilenceRuleCreateModal.test.jsx,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查
+web/src/pages/silence/silencePresets.test.js,added,default_path,reviewed,适用 OCR 规则及变更上下文审查；默认排除的本次测试/发布资料另做人工检查

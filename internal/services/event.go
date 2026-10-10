@@ -126,7 +126,7 @@ func (e eventService) ListCurrentEvent(req interface{}) (interface{}, interface{
 			continue
 		}
 
-		if !matchStatus(&event, r.Status, mute.MuteParams{TenantId: r.TenantId, Labels: event.Labels}) {
+		if !matchStatus(&event, r.Status, mute.ParamsForEvent(&event, nil)) {
 			continue
 		}
 

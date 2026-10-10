@@ -82,12 +82,7 @@ func filterAlertEvents(faultCenter models.FaultCenter, alerts map[string]*models
 
 // isMutedEvent 检查事件是否被静默
 func isMutedEvent(event *models.AlertCurEvent, faultCenter models.FaultCenter) bool {
-	return mute.IsMuted(mute.MuteParams{
-		IsRecovered:   event.IsRecovered,
-		TenantId:      event.TenantId,
-		Labels:        event.Labels,
-		RecoverNotify: faultCenter.RecoverNotify,
-	})
+	return mute.IsMuted(mute.ParamsForEvent(event, faultCenter.RecoverNotify))
 }
 
 // createAggregatedAlert 创建聚合告警对象

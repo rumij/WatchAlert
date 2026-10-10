@@ -1,0 +1,9 @@
+# 与现有生产 compose 合并，不单独启动，不改变数据库、缓存、端口或挂载。
+services:
+  w8t-service:
+    image: watchalert-backend:${WATCHALERT_RELEASE_TAG:-zabbix-silence-20261010}
+  w8t-web:
+    image: watchalert-frontend:${WATCHALERT_RELEASE_TAG:-zabbix-silence-20261010}
+    environment:
+      WATCHALERT_BACKEND_HOST: w8t-service
+      WATCHALERT_BACKEND_PORT: "9001"

@@ -1,0 +1,1110 @@
+import {Form, Input, Button, Select, Card, Drawer, Checkbox, TimePicker} from 'antd'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { createNotice, updateNotice } from '../../api/notice'
+import { getDutyManagerList } from '../../api/duty'
+import FeiShuImg from "./img/feishu.svg";
+import EmailImg from "./img/Email.svg";
+import DingDingImg from "./img/dingding.svg";
+import WeChatImg from "./img/qywechat.svg"
+import SlackImg from "./img/slack.svg"
+import WebHook from "./img/webhook.svg"
+import PhoneImg from "./img/phone.svg";
+import SMSImg from "./img/sms.svg";
+import SREFlowImg from "./img/sreflow.svg"
+import {MinusCircleOutlined, PlusOutlined} from "@ant-design/icons";
+import {getNoticeTmplList} from "../../api/noticeTmpl";
+import {getUserList} from "../../api/user";
+import { noticeTest } from '../../api/notice';
+import dayjs from 'dayjs';
+
+const format = 'HH:mm';
+const MyFormItemContext = React.createContext([])
+
+function toArr(str) {
+    return Array.isArray(str) ? str : [str]
+}
+
+const MyFormItem = ({ name, ...props }) => {
+    const prefixPath = React.useContext(MyFormItemContext)
+    const concatName = name !== undefined ? [...prefixPath, ...toArr(name)] : undefined
+    return <Form.Item name={concatName} {...props} />
+}
+
+// 将 map 格式的 headers 转换为数组格式用于表单
+const headersMapToArray = (headers) => {
+    if (!headers || typeof headers !== 'object') return []
+    return Object.entries(headers).map(([key, value]) => ({ key, value }))
+}
+
+// 将数组格式的 headers 转换为 map 格式用于提交
+const headersArrayToMap = (headersArray) => {
+    if (!headersArray || !Array.isArray(headersArray)) return {}
+    return headersArray.reduce((acc, { key, value }) => {
+        if (key) {
+            acc[key] = value
+        }
+        return acc
+    }, {})
+}
+
+export const CreateNoticeObjectModal = ({ visible, onClose, selectedRow, type, handleList }) => {
+    const { Option } = Select
+    const [form] = Form.useForm()
+
+    // 基础状态
+    const [dutyList, setDutyList] = useState([])
+    const [submitLoading, setSubmitLoading] = useState(false)
+    const [testLoadingRoutes, setTestLoadingRoutes] = useState({})
+    const [selectedNoticeCard, setSelectedNoticeCard] = useState(0)
+    const [noticeType, setNoticeType] = useState('FeiShu')
+
+    const [filteredOptions, setFilteredOptions] = useState([])
+
+    // 数据加载状态
+    const [dataLoaded, setDataLoaded] = useState(false)
+    const [templateCache, setTemplateCache] = useState({})
+    const templateCacheRef = useRef({})
+    const loadingTemplatesRef = useRef(new Set()) // 跟踪正在加载的模板类型
+
+    const PRIORITY_OPTIONS = useMemo(() => [
+        { label: 'P0 紧急', value: 'P0' },
+        { label: 'P1 重要', value: 'P1' },
+        { label: 'P2 一般', value: 'P2' }
+    ], [])
+
+    const cards = useMemo(() => [
+        { imgSrc: FeiShuImg, text: '飞书', value: 'FeiShu' },
+        { imgSrc: EmailImg, text: '邮件', value: 'Email' },
+        { imgSrc: DingDingImg, text: '钉钉', value: 'DingDing' },
+        { imgSrc: WeChatImg, text: '企业微信', value: 'WeChat' },
+        { imgSrc: SlackImg, text: 'Slack', value: 'Slack' },
+        { imgSrc: WebHook, text: 'WebHook', value: 'WebHook' },
+        { imgSrc: PhoneImg, text: '电话', value: 'Phone' },
+        { imgSrc: SMSImg, text: '短信', value: 'SMS' },
+        { imgSrc: SREFlowImg, text: 'SREFlow', value: 'SREFlow' },
+    ], [])
+
+    // 全局状态保持不变，但生效时间将存储在各个路由中
+    const weekOptions = [
+        {
+            label:'周一',
+            value:'Monday',
+        },
+        {
+            label:'周二',
+            value:'Tuesday',
+        },
+        {
+            label:'周三',
+            value:'Wednesday',
+        },
+        {
+            label:'周四',
+            value:'Thursday',
+        },
+        {
+            label:'周五',
+            value:'Friday',
+        },
+        {
+            label:'周六',
+            value:'Saturday',
+        },
+        {
+            label:'周日',
+            value:'Sunday',
+        },
+    ];
+
+    // API 调用函数
+    const loadDutyList = useCallback(async () => {
+        try {
+            const res = await getDutyManagerList()
+            if (res?.data && Array.isArray(res?.data)) {
+                const newData = res?.data?.map((item) => ({
+                    label: item.name,
+                    value: item.id
+                }))
+                setDutyList(newData)
+            }
+        } catch (error) {
+            console.error('获取值班表列表失败:', error)
+            setDutyList([])
+        }
+    }, [])
+
+    const loadUserList = useCallback(async () => {
+        try {
+            const res = await getUserList()
+            if (res?.data && Array.isArray(res?.data)) {
+                const options = res?.data?.map((item) => ({
+                    userName: item.username,
+                    userEmail: item.email,
+                    phone: item.phone
+                }))
+                setFilteredOptions(options)
+            }
+        } catch (error) {
+            console.error('获取用户列表失败:', error)
+            setFilteredOptions([])
+        }
+    }, [])
+
+    const loadNoticeTemplates = useCallback(async (noticeTypeParam) => {
+        // 检查缓存
+        if (templateCacheRef.current[noticeTypeParam]) {
+            return templateCacheRef.current[noticeTypeParam]
+        }
+
+        // 检查是否正在加载，避免重复请求
+        if (loadingTemplatesRef.current.has(noticeTypeParam)) {
+            return []
+        }
+
+        loadingTemplatesRef.current.add(noticeTypeParam)
+
+        try {
+            const res = await getNoticeTmplList({ noticeType: noticeTypeParam })
+            if (res?.data && Array.isArray(res?.data)) {
+                const newData = res?.data?.map((item) => ({
+                    label: item.name,
+                    value: item.id
+                }))
+                // 缓存结果
+                templateCacheRef.current[noticeTypeParam] = newData
+                setTemplateCache(prev => ({
+                    ...prev,
+                    [noticeTypeParam]: newData
+                }))
+                return newData
+            }
+            return []
+        } catch (error) {
+            console.error('获取通知模板列表失败:', error)
+            return []
+        } finally {
+            loadingTemplatesRef.current.delete(noticeTypeParam)
+        }
+    }, [])
+
+    // 初始化数据加载 - 只在模态框首次打开时执行
+    useEffect(() => {
+        if (visible && !dataLoaded) {
+            const loadInitialData = async () => {
+                try {
+                    // 先加载基础数据
+                    await Promise.all([
+                        loadDutyList(),
+                        loadUserList()
+                    ])
+
+                    // 如果是编辑模式，需要预先加载相关的通知模板
+                    if (selectedRow && selectedRow.routes) {
+                        const noticeTypesToLoad = []
+                        if (selectedRow.routes?.length > 0) {
+                            // 收集所有路由中的通知类型
+                            selectedRow.routes.forEach(route => {
+                                if (route.noticeType && !noticeTypesToLoad.includes(route.noticeType)) {
+                                    noticeTypesToLoad.push(route.noticeType)
+                                }
+                            })
+                        } else {
+                            // 单一路由情况
+                            if (selectedRow.noticeType && !noticeTypesToLoad.includes(selectedRow.noticeType)) {
+                                noticeTypesToLoad.push(selectedRow.noticeType)
+                            }
+                        }
+
+                        // 并行加载所有需要的通知模板
+                        if (noticeTypesToLoad.length > 0) {
+                            await Promise.all(
+                                noticeTypesToLoad.map(type => loadNoticeTemplates(type))
+                            )
+                        } else {
+                            // 如果没有特定类型，加载默认类型
+                            await loadNoticeTemplates()
+                        }
+                    } else {
+                        // 创建模式，加载默认类型
+                        await loadNoticeTemplates()
+                    }
+                } finally {
+                    setDataLoaded(true)
+                }
+            }
+            loadInitialData()
+        }
+    }, [visible, dataLoaded, loadDutyList, loadUserList, loadNoticeTemplates, selectedRow])
+
+    // 表单初始化 - 根据编辑/创建模式设置表单值
+    useEffect(() => {
+        if (!visible) {
+            // 模态框关闭时重置状态
+            setDataLoaded(false)
+            setSelectedNoticeCard(0)
+            setNoticeType('')
+            setTemplateCache({})
+            setTestLoadingRoutes({})
+            templateCacheRef.current = {}
+            loadingTemplatesRef.current.clear()
+            form.resetFields()
+            return
+        }
+
+        if (selectedRow) {
+            // 编辑模式
+            const routes = selectedRow.routes?.length > 0
+                ? selectedRow.routes.map(route => ({
+                    ...route,
+                    severitys: Array.isArray(route.severitys) ? route.severitys : (route.severitys ? [route.severitys] : ['P0']),
+                    noticeTmplId: route.noticeTmplId || '',
+                    headers: headersMapToArray(route.headers),
+                    // SREFlow 类型从 headers 中提取 workspaceId
+                    workspaceId: route.noticeType === 'SREFlow' && route.headers ? (route.headers['X-Workspace-Id'] || '') : '',
+                    effectiveTime: route.effectiveTime && Object.keys(route.effectiveTime).length > 0 ? {
+                        week: route.effectiveTime.week || [],
+                        startTime: route.effectiveTime.startTime !== undefined ? route.effectiveTime.startTime : 0,
+                        endTime: route.effectiveTime.endTime !== undefined ? route.effectiveTime.endTime : 0
+                    } : {
+                        week: [],
+                        startTime: 0,
+                        endTime: 0
+                    }
+                }))
+                : [{
+                    severitys: ['P0'],
+                    noticeType: selectedRow.noticeType || 'FeiShu',
+                    noticeTmplId: selectedRow.noticeTmplId || '',
+                    hook: selectedRow.hook || '',
+                    headers: headersMapToArray(selectedRow.headers),
+                    sign: selectedRow.sign || '',
+                    subject: selectedRow.email?.subject || '',
+                    to: selectedRow.email?.to || [],
+                    cc: selectedRow.email?.cc || [],
+                    effectiveTime: selectedRow.effectiveTime && Object.keys(selectedRow.effectiveTime).length > 0 ? {
+                        week: selectedRow.effectiveTime.week || [],
+                        startTime: selectedRow.effectiveTime.startTime !== undefined ? selectedRow.effectiveTime.startTime : 0,
+                        endTime: selectedRow.effectiveTime.endTime !== undefined ? selectedRow.effectiveTime.endTime : 0
+                    } : {
+                        week: [],
+                        startTime: 0,
+                        endTime: 0
+                    }
+                }]
+
+            // 等待相关模板加载完成后设置表单值
+            setTimeout(() => {
+                form.setFieldsValue({
+                    name: selectedRow.name,
+                    dutyId: selectedRow.dutyId,
+                    routes: routes
+                })
+            }, 0)
+
+            const cardIndex = cards.findIndex(card => card.value === (selectedRow.noticeType || 'FeiShu'))
+            setSelectedNoticeCard(cardIndex >= 0 ? cardIndex : 0)
+            setNoticeType(selectedRow.noticeType || 'FeiShu')
+        } else {
+            // 创建模式
+            form.setFieldsValue({
+                routes: [{
+                    severitys: ['P0'],
+                    noticeType: 'FeiShu',
+                    noticeTmplId: '',
+                    hook: '',
+                    headers: [],
+                    sign: '',
+                    subject: '',
+                    to: [],
+                    cc: [],
+                    effectiveTime: {
+                        week: [],
+                        startTime: 0,
+                        endTime: 0
+                    }
+                }]
+            })
+            setSelectedNoticeCard(0)
+            setNoticeType('FeiShu')
+        }
+    }, [visible, selectedRow, form, cards])
+
+    // 表单处理函数
+    const handleInputChange = (e) => {
+        const newValue = e.target.value.replace(/\s/g, '')
+        form.setFieldValue('name', newValue)
+    }
+
+    const handleKeyPress = (e) => {
+        if (e.key === ' ') {
+            e.preventDefault()
+        }
+    }
+
+
+
+    // 业务逻辑函数
+    const handleCreate = async (data) => {
+        try {
+            const params = {
+                tenantId: 'default',
+                name: data.name,
+                dutyId: data.dutyId || null,
+                routes: data.routes?.map(route => {
+                    // SREFlow 类型将 workspaceId 放入 headers 的 X-Workspace-Id
+                    let headers = headersArrayToMap(route.headers)
+                    if (route.noticeType === 'SREFlow' && route.workspaceId) {
+                        headers = { ...headers, 'X-Workspace-Id': route.workspaceId }
+                    }
+                    return {
+                        noticeType: route.noticeType || noticeType,
+                        noticeTmplId: route.noticeTmplId || '',
+                        severitys: Array.isArray(route.severitys) ? route.severitys : (route.severitys ? [route.severitys] : ['P0']),
+                        hook: route.hook || '',
+                        headers: headers,
+                        sign: route.sign || '',
+                        subject: route.subject || '',
+                        to: route.to || [],
+                        cc: route.cc || [],
+                        effectiveTime: route.effectiveTime && Object.keys(route.effectiveTime).length > 0 ? {
+                            week: route.effectiveTime.week || [],
+                            startTime: route.effectiveTime.startTime !== undefined ? route.effectiveTime.startTime : 0,
+                            endTime: route.effectiveTime.endTime !== undefined ? route.effectiveTime.endTime : 0
+                        } : {
+                            week: [],
+                            startTime: 0,
+                            endTime: 0
+                        }
+                    }
+                }) || [],
+            }
+            await createNotice(params)
+            handleList()
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const handleUpdate = async (data) => {
+        try {
+            const params = {
+                tenantId: selectedRow.tenantId || 'default',
+                name: data.name,
+                dutyId: data.dutyId || null,
+                routes: data.routes?.map(route => {
+                    // SREFlow 类型将 workspaceId 放入 headers 的 X-Workspace-Id
+                    let headers = headersArrayToMap(route.headers)
+                    if (route.noticeType === 'SREFlow' && route.workspaceId) {
+                        headers = { ...headers, 'X-Workspace-Id': route.workspaceId }
+                    }
+                    return {
+                        noticeType: route.noticeType || noticeType,
+                        noticeTmplId: route.noticeTmplId || '',
+                        severitys: Array.isArray(route.severitys) ? route.severitys : (route.severitys ? [route.severitys] : ['P0']),
+                        hook: route.hook || '',
+                        headers: headers,
+                        sign: route.sign || '',
+                        subject: route.subject || '',
+                        to: route.to || [],
+                        cc: route.cc || [],
+                        effectiveTime: route.effectiveTime && Object.keys(route.effectiveTime).length > 0 ? {
+                            week: route.effectiveTime.week || [],
+                            startTime: route.effectiveTime.startTime !== undefined ? route.effectiveTime.startTime : 0,
+                            endTime: route.effectiveTime.endTime !== undefined ? route.effectiveTime.endTime : 0
+                        } : {
+                            week: [],
+                            startTime: 0,
+                            endTime: 0
+                        }
+                    }
+                }) || [],
+                updateBy: 'current_user',
+                uuid: selectedRow.uuid
+            }
+            await updateNotice(params)
+            handleList()
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const handleFormSubmit = async (values) => {
+        if (type === 'create') {
+            await handleCreate(values)
+        } else if (type === 'update') {
+            await handleUpdate(values)
+        }
+        onClose()
+    }
+
+    const handleSubmit = async () => {
+        setSubmitLoading(true)
+        try {
+            const values = await form.validateFields()
+            await handleFormSubmit(values)
+        } catch (error) {
+            console.log('表单验证失败:', error)
+        } finally {
+            setSubmitLoading(false)
+        }
+    }
+
+    const handleTestNotice = async (routeIndex) => {
+        setTestLoadingRoutes(prev => ({ ...prev, [routeIndex]: true }))
+        try {
+            const formValues = form.getFieldsValue()
+            const route = formValues.routes?.[routeIndex]
+
+            if (!route) {
+                console.error('Route not found')
+                return
+            }
+
+            // SREFlow 类型将 workspaceId 放入 headers 的 X-Workspace-Id
+            let headers = headersArrayToMap(route.headers)
+            if (route.noticeType === 'SREFlow' && route.workspaceId) {
+                headers = { ...headers, 'X-Workspace-Id': route.workspaceId }
+            }
+
+            const params = {
+                noticeType: route.noticeType || 'FeiShu',
+                hook: route.hook || '',
+                headers: headers,
+                sign: route.sign || '',
+                email: {
+                    subject: route.subject || '',
+                    to: route.to || [],
+                    cc: route.cc || []
+                },
+                phone: {
+                    to: route.to || []
+                },
+                sms: {
+                    to: route.to || []
+                }
+            }
+
+            await noticeTest(params)
+        } catch (error) {
+            console.log(error)
+        } finally {
+            setTestLoadingRoutes(prev => ({ ...prev, [routeIndex]: false }))
+        }
+    }
+
+    // 将秒数转换为 ISO 格式的 Date 对象
+    const secondsToDateObj = (seconds) => {
+        // 以当前日期为基础
+        const date = dayjs();
+
+        // 计算小时和分钟
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        // 设置 dayjs 对象的小时和分钟
+        return date.set('hour', hours).set('minute', minutes).set('second', 0); // 秒数设为 0
+    };
+
+
+
+    return (
+        <Drawer
+            title={type === 'create' ? '创建通知对象' : '编辑通知对象'}
+            open={visible}
+            onClose={onClose}
+            width={820}
+            footer={
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center'
+                }}>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={submitLoading}
+                        onClick={handleSubmit}
+                        style={{ backgroundColor: '#000000' }}
+                    >
+                        提交
+                    </Button>
+                </div>
+            }
+        >
+            <Form form={form} name="form_item_path" layout="vertical">
+                <div style={{display: 'flex'}}>
+                    <MyFormItem
+                        name="name"
+                        label="名称"
+                        style={{ marginRight: '10px', width: '500px' }}
+                        rules={[{ required: true }]}
+                    >
+                        <Input
+                            onChange={handleInputChange}
+                            onKeyPress={handleKeyPress}
+                            placeholder="请输入通知对象名称"
+                        />
+                    </MyFormItem>
+
+                    <MyFormItem
+                        name="dutyId"
+                        label="值班表"
+                        style={{ width: '500px' }}
+                    >
+                        <Select
+                            showSearch
+                            allowClear
+                            placeholder="请选择值班表"
+                            options={dutyList}
+                        />
+                    </MyFormItem>
+                </div>
+
+                <MyFormItem
+                    name="routes"
+                    label="通知路由"
+                    style={{marginRight: '10px', width: '100%'}}
+                >
+                    <Form.List name="routes">
+                        {(fields, {add, remove}) => (
+                            <>
+                                {fields.map(({key, name, ...restField}) => {
+                                    return (
+                                        <div
+                                            key={key}
+                                            style={{
+                                                marginBottom: 16,
+                                                padding: 22,
+                                                border: '1px solid #d9d9d9',
+                                                background: '#ffffffff',
+                                                borderRadius: 8,
+                                                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                            }}
+                                        >
+                                            <div style={{display: 'flex', gap: 8}}>
+                                                <div style={{width: '100%'}}>
+                                                    {fields.length > 1 && (
+                                                        <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+                                                            <MinusCircleOutlined
+                                                                onClick={() => remove(name)}
+                                                                style={{color: '#ff4d4f', cursor: 'pointer'}}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {/* 通知类型选择 */}
+                                                    <Form.Item
+                                                        {...restField}
+                                                        name={[name, "noticeType"]}
+                                                        label="通知类型"
+                                                        rules={[{required: true}]}
+                                                    >
+                                                        <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                                            const prevNoticeType = prevValues?.routes?.[name]?.noticeType
+                                                            const currentNoticeType = currentValues?.routes?.[name]?.noticeType
+                                                            return prevNoticeType !== currentNoticeType
+                                                        }}>
+                                                            {({ getFieldValue, setFieldsValue }) => {
+                                                                const currentNoticeType = getFieldValue(['routes', name, 'noticeType']) || 'FeiShu'
+                                                                const selectedCardIndex = cards.findIndex(card => card.value === currentNoticeType)
+
+                                                                const handleRouteCardClick = async (cardIndex) => {
+                                                                    const selectedCard = cards[cardIndex]
+                                                                    const routes = getFieldValue('routes') || []
+                                                                    const newRoutes = [...routes]
+                                                                    if (newRoutes[name]) {
+                                                                        newRoutes[name] = {
+                                                                            ...newRoutes[name],
+                                                                            noticeType: selectedCard.value,
+                                                                            noticeTmplId: '' // 清空模板选择
+                                                                        }
+                                                                    }
+                                                                    setFieldsValue({ routes: newRoutes })
+                                                                    // 预加载新通知类型的模板（不阻塞UI）
+                                                                    if (!templateCacheRef.current[selectedCard.value]) {
+                                                                        loadNoticeTemplates(selectedCard.value)
+                                                                    }
+                                                                }
+
+                                                                return (
+                                                                    <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                                                                        {cards.map((card, cardIndex) => (
+                                                                            <Card
+                                                                                key={cardIndex}
+                                                                                style={{
+                                                                                    height: 90,
+                                                                                    width: 110,
+                                                                                    position: 'relative',
+                                                                                    cursor: 'pointer',
+                                                                                    border: selectedCardIndex === cardIndex ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                                                                                }}
+                                                                                onClick={() => handleRouteCardClick(cardIndex)}
+                                                                            >
+                                                                                <div style={{
+                                                                                    display: 'flex',
+                                                                                    flexDirection: 'column',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'center',
+                                                                                    height: '100%',
+                                                                                    marginTop: '-10px'
+                                                                                }}>
+                                                                                    <img
+                                                                                        src={card.imgSrc}
+                                                                                        style={{height: '45px', width: '80px', objectFit: 'contain'}}
+                                                                                        alt={card.text}
+                                                                                    />
+                                                                                    <p style={{
+                                                                                        fontSize: '10px',
+                                                                                        textAlign: 'center',
+                                                                                        marginTop: '3px',
+                                                                                        marginBottom: 0
+                                                                                    }}>
+                                                                                        {card.text}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </Card>
+                                                                        ))}
+                                                                    </div>
+                                                                )
+                                                            }}
+                                                        </Form.Item>
+                                                    </Form.Item>
+
+                                                    {/* 根据通知类型显示不同的配置 */}
+                                                    <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                                        const prevNoticeType = prevValues?.routes?.[name]?.noticeType
+                                                        const currentNoticeType = currentValues?.routes?.[name]?.noticeType
+                                                        return prevNoticeType !== currentNoticeType
+                                                    }}>
+                                                        {({ getFieldValue }) => {
+                                                            const currentNoticeType = getFieldValue(['routes', name, 'noticeType']) || 'FeiShu'
+
+                                                            if (currentNoticeType === 'Email') {
+                                                                return (
+                                                                    <>
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "subject"]}
+                                                                            label="邮件主题"
+                                                                            rules={[{required: true}]}
+                                                                        >
+                                                                            <Input placeholder="邮件主题"/>
+                                                                        </Form.Item>
+
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "to"]}
+                                                                            label="收件人"
+                                                                            rules={[{required: false}]}
+                                                                        >
+                                                                            <Select
+                                                                                mode="multiple"
+                                                                                placeholder="请选择需要通知的人员"
+                                                                                style={{ width: '100%' }}
+                                                                            >
+                                                                                {filteredOptions.map((item) => (
+                                                                                    <Option
+                                                                                        key={item.userName}
+                                                                                        value={item.userEmail}
+                                                                                    >
+                                                                                        {item.userName} ({item.userEmail})
+                                                                                    </Option>
+                                                                                ))}
+                                                                            </Select>
+                                                                        </Form.Item>
+
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "cc"]}
+                                                                            label="抄送人"
+                                                                        >
+                                                                            <Select
+                                                                                mode="multiple"
+                                                                                placeholder="请选择需要抄送的人员"
+                                                                                style={{ width: '100%' }}
+                                                                            >
+                                                                                {filteredOptions.map((item) => (
+                                                                                    <Option
+                                                                                        key={item.userName}
+                                                                                        value={item.userEmail}
+                                                                                    >
+                                                                                        {item.userName} ({item.userEmail})
+                                                                                    </Option>
+                                                                                ))}
+                                                                            </Select>
+                                                                        </Form.Item>
+                                                                    </>
+                                                                )
+                                                            } else if (currentNoticeType === 'Phone') {
+                                                                return (
+                                                                    <>
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "to"]}
+                                                                            label="接收人"
+                                                                            rules={[{required: false}]}
+                                                                        >
+                                                                            <Select
+                                                                                mode="multiple"
+                                                                                placeholder="请选择需要电话通知的人员"
+                                                                                style={{ width: '100%' }}
+                                                                            >
+                                                                                {filteredOptions.map((item) => (
+                                                                                    <Option
+                                                                                        key={item.userName}
+                                                                                        value={item.phone}
+                                                                                        disabled={item.phone.length === 0}
+                                                                                    >
+                                                                                        {item.userName}
+                                                                                    </Option>
+                                                                                ))}
+                                                                            </Select>
+                                                                        </Form.Item>
+                                                                    </>
+                                                                )
+                                                            } else if (currentNoticeType === 'SMS') {
+                                                                return (
+                                                                    <>
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "to"]}
+                                                                            label="接收人"
+                                                                            rules={[{required: false}]}
+                                                                        >
+                                                                            <Select
+                                                                                mode="multiple"
+                                                                                placeholder="请选择需要短信通知的人员"
+                                                                                style={{ width: '100%' }}
+                                                                            >
+                                                                                {filteredOptions.map((item) => (
+                                                                                    <Option
+                                                                                        key={item.userName}
+                                                                                        value={item.phone}
+                                                                                        disabled={item.phone.length === 0}
+                                                                                    >
+                                                                                        {item.userName}
+                                                                                    </Option>
+                                                                                ))}
+                                                                            </Select>
+                                                                        </Form.Item>
+                                                                    </>
+                                                                )
+                                                            } else if (currentNoticeType === 'SREFlow') {
+                                                                return (
+                                                                    <>
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "hook"]}
+                                                                            label="Hook地址"
+                                                                            rules={[{required: true, pattern: /^(http|https):\/\//}]}
+                                                                        >
+                                                                            <Input placeholder="http(s)://xxx.xxx"/>
+                                                                        </Form.Item>
+
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "workspaceId"]}
+                                                                            label="空间ID"
+                                                                            rules={[{required: true, message: '请输入空间ID'}]}
+                                                                        >
+                                                                            <Input placeholder="请输入空间ID (X-Workspace-Id)"/>
+                                                                        </Form.Item>
+                                                                    </>
+                                                                )
+                                                            } else {
+                                                                return (
+                                                                    <>
+                                                                        <Form.Item
+                                                                            {...restField}
+                                                                            name={[name, "hook"]}
+                                                                            label="Hook地址"
+                                                                            rules={[{required: true, pattern: /^(http|https):\/\//}]}
+                                                                        >
+                                                                            <Input placeholder="http(s)://xxx.xxx"/>
+                                                                        </Form.Item>
+
+                                                                        {(currentNoticeType === 'FeiShu' || currentNoticeType === 'DingDing') && (
+                                                                            <Form.Item
+                                                                                {...restField}
+                                                                                name={[name, "sign"]}
+                                                                                label="签名"
+                                                                            >
+                                                                                <Input placeholder="选填签名信息"/>
+                                                                            </Form.Item>
+                                                                        )}
+
+                                                                        {/* WebHook 类型显示自定义请求头配置 */}
+                                                                        {currentNoticeType === 'WebHook' && (
+                                                                            <>
+                                                                                <label style={{ display: "block", marginBottom: "8px" }}>自定义请求头</label>
+                                                                                <Form.List name={[name, "headers"]}>
+                                                                                    {(headerFields, { add: addHeader, remove: removeHeader }) => (
+                                                                                        <>
+                                                                                            {headerFields.map(({ key: hKey, name: hName, ...hRestField }) => (
+                                                                                                <div
+                                                                                                    key={hKey}
+                                                                                                    style={{
+                                                                                                        display: "flex",
+                                                                                                        marginBottom: 8,
+                                                                                                        gap: "8px",
+                                                                                                        alignItems: "center",
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <Form.Item
+                                                                                                        {...hRestField}
+                                                                                                        name={[hName, "key"]}
+                                                                                                        style={{ flex: 1, width: "300px" }}
+                                                                                                        rules={[{ required: true, message: "请输入请求头键" }]}
+                                                                                                    >
+                                                                                                        <Input placeholder="键 (例如: Content-Type)" />
+                                                                                                    </Form.Item>
+                                                                                                    <Form.Item
+                                                                                                        {...hRestField}
+                                                                                                        name={[hName, "value"]}
+                                                                                                        style={{ flex: 1, width: "300px" }}
+                                                                                                        rules={[{ required: true, message: "请输入请求头值" }]}
+                                                                                                    >
+                                                                                                        <Input placeholder="值 (例如: application/json)" />
+                                                                                                    </Form.Item>
+                                                                                                    <MinusCircleOutlined
+                                                                                                        style={{
+                                                                                                            marginTop: "-25px",
+                                                                                                            display: "flex",
+                                                                                                            justifyContent: "center",
+                                                                                                            alignItems: "center",
+                                                                                                            cursor: "pointer",
+                                                                                                        }}
+                                                                                                        onClick={() => removeHeader(hName)}
+                                                                                                    />
+                                                                                                </div>
+                                                                                            ))}
+                                                                                            <Form.Item>
+                                                                                                <Button
+                                                                                                    type="dashed"
+                                                                                                    onClick={() => addHeader()}
+                                                                                                    block
+                                                                                                    icon={<PlusOutlined />}
+                                                                                                    disabled={headerFields.length >= 10}
+                                                                                                >
+                                                                                                    添加请求头
+                                                                                                </Button>
+                                                                                            </Form.Item>
+                                                                                        </>
+                                                                                    )}
+                                                                                </Form.List>
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                )
+                                                            }
+                                                        }}
+                                                    </Form.Item>
+
+
+                                                    {/* 通知模板选择 */}
+                                                    <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                                        const prevNoticeType = prevValues?.routes?.[name]?.noticeType
+                                                        const currentNoticeType = currentValues?.routes?.[name]?.noticeType
+                                                        return prevNoticeType !== currentNoticeType
+                                                    }}>
+                                                        {({ getFieldValue }) => {
+                                                            const currentNoticeType = getFieldValue(['routes', name, 'noticeType']) || 'FeiShu'
+
+                                                            // 当通知类型为 WebHook、Phone、SMS、SREFlow 时，不显示通知模板选项
+                                                            if (currentNoticeType === 'WebHook' || currentNoticeType === 'Phone' || currentNoticeType === 'SMS' || currentNoticeType === 'SREFlow') {
+                                                                return null
+                                                            }
+
+                                                            // 获取当前通知类型对应的模板选项
+                                                            const currentTemplateOptions = templateCacheRef.current[currentNoticeType] || templateCache[currentNoticeType] || []
+
+                                                            return (
+                                                                <Form.Item
+                                                                    {...restField}
+                                                                    name={[name, "noticeTmplId"]}
+                                                                    label="通知模板"
+                                                                    rules={[{required: true}]}
+                                                                >
+                                                                    <Select
+                                                                        placeholder="请选择通知模板"
+                                                                        options={currentTemplateOptions}
+                                                                        onFocus={async () => {
+                                                                            if (!templateCacheRef.current[currentNoticeType]) {
+                                                                                const templates = await loadNoticeTemplates(currentNoticeType)
+                                                                                // 强制更新当前选项
+                                                                                if (templates && templates.length > 0) {
+                                                                                    // 触发重新渲染
+                                                                                    form.setFieldValue(['routes', name, 'noticeTmplId'], form.getFieldValue(['routes', name, 'noticeTmplId']))
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </Form.Item>
+                                                            )
+                                                        }}
+                                                    </Form.Item>
+
+                                                    {/* 告警等级选择 */}
+                                                    <Form.Item
+                                                        {...restField}
+                                                        name={[name, "severitys"]}
+                                                        label="适用级别"
+                                                        rules={[{required: true, message: '请至少选择一个告警等级'}]}
+                                                    >
+                                                        <Checkbox.Group
+                                                            options={PRIORITY_OPTIONS}
+                                                        />
+                                                    </Form.Item>
+
+                                                    <div style={{marginTop: '-13px'}}>
+                                                        <Form.Item
+                                                            {...restField}
+                                                            name={[name, "effectiveTime"]}
+                                                            label="生效时间"
+                                                            style={{
+                                                                width: '100%',
+                                                            }}
+                                                        >
+                                                            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                                                const prevEffectiveTime = prevValues?.routes?.[name]?.effectiveTime
+                                                                const currentEffectiveTime = currentValues?.routes?.[name]?.effectiveTime
+                                                                return prevEffectiveTime !== currentEffectiveTime
+                                                            }}>
+                                                                {({ getFieldValue }) => {
+                                                                    const currentEffectiveTime = getFieldValue(['routes', name, 'effectiveTime']) && Object.keys(getFieldValue(['routes', name, 'effectiveTime'])).length > 0 ? {
+                                                                        week: getFieldValue(['routes', name, 'effectiveTime']).week || [],
+                                                                        startTime: getFieldValue(['routes', name, 'effectiveTime']).startTime !== undefined ? getFieldValue(['routes', name, 'effectiveTime']).startTime : 0,
+                                                                        endTime: getFieldValue(['routes', name, 'effectiveTime']).endTime !== undefined ? getFieldValue(['routes', name, 'effectiveTime']).endTime : 0
+                                                                    } : {
+                                                                        week: [],
+                                                                        startTime: 0,
+                                                                        endTime: 0
+                                                                    }
+
+                                                                    return (
+                                                                        <div style={{display: 'flex', gap: '10px'}}>
+                                                                            <Select
+                                                                                mode="multiple"
+                                                                                allowClear
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                }}
+                                                                                placeholder="如果为空则表示全天候"
+                                                                                value={currentEffectiveTime.week}
+                                                                                onChange={(value) => {
+                                                                                    const routes = getFieldValue('routes') || [];
+                                                                                    const newRoutes = [...routes];
+                                                                                    if (newRoutes[name]) {
+                                                                                        newRoutes[name] = {
+                                                                                            ...newRoutes[name],
+                                                                                            effectiveTime: {
+                                                                                                ...newRoutes[name].effectiveTime,
+                                                                                                week: value
+                                                                                            }
+                                                                                        };
+                                                                                    }
+                                                                                    form.setFieldsValue({ routes: newRoutes });
+                                                                                }}
+                                                                                options={weekOptions}
+                                                                            />
+                                                                            <TimePicker
+                                                                                placeholder={"开始"}
+                                                                                format={format}
+                                                                                value={secondsToDateObj(currentEffectiveTime.startTime !== undefined ? currentEffectiveTime.startTime : 0)}
+                                                                                onChange={(value) => {
+                                                                                    const time = new Date(value);
+                                                                                    const hours = time.getHours().toString().padStart(2, '0');
+                                                                                    const minutes = time.getMinutes().toString().padStart(2, '0');
+                                                                                    const seconds = (parseInt(hours) * 3600) + (parseInt(minutes) * 60);
+
+                                                                                    const routes = getFieldValue('routes') || [];
+                                                                                    const newRoutes = [...routes];
+                                                                                    if (newRoutes[name]) {
+                                                                                        newRoutes[name] = {
+                                                                                            ...newRoutes[name],
+                                                                                            effectiveTime: {
+                                                                                                ...newRoutes[name].effectiveTime,
+                                                                                                startTime: seconds
+                                                                                            }
+                                                                                        };
+                                                                                    }
+                                                                                    form.setFieldsValue({ routes: newRoutes });
+                                                                                }}/>
+                                                                            <TimePicker
+                                                                                placeholder={"结束"}
+                                                                                format={format}
+                                                                                value={secondsToDateObj(currentEffectiveTime.endTime !== undefined ? currentEffectiveTime.endTime : 0)}
+                                                                                onChange={(value) => {
+                                                                                    const time = new Date(value);
+                                                                                    const hours = time.getHours().toString().padStart(2, '0');
+                                                                                    const minutes = time.getMinutes().toString().padStart(2, '0');
+                                                                                    const seconds = (parseInt(hours) * 3600) + (parseInt(minutes) * 60);
+
+                                                                                    const routes = getFieldValue('routes') || [];
+                                                                                    const newRoutes = [...routes];
+                                                                                    if (newRoutes[name]) {
+                                                                                        newRoutes[name] = {
+                                                                                            ...newRoutes[name],
+                                                                                            effectiveTime: {
+                                                                                                ...newRoutes[name].effectiveTime,
+                                                                                                endTime: seconds
+                                                                                            }
+                                                                                        };
+                                                                                    }
+                                                                                    form.setFieldsValue({ routes: newRoutes });
+                                                                                }}/>
+                                                                        </div>
+                                                                    )
+                                                                }}
+                                                            </Form.Item>
+                                                        </Form.Item>
+                                                    </div>
+
+                                                    <div style={{ marginTop: "-15px",marginBottom: "-20px", display: 'flex', justifyContent: 'flex-end'}}>
+                                                        {/* 通知测试按钮 */}
+                                                        <Form.Item>
+                                                            <Button
+                                                                type="default"
+                                                                onClick={() => handleTestNotice(name)}
+                                                                loading={testLoadingRoutes[name]}
+                                                                style={{ marginTop: 8 }}
+                                                            >
+                                                                通知测试
+                                                            </Button>
+                                                        </Form.Item>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+
+                                <Form.Item>
+                                    <Button
+                                        type="dashed"
+                                        onClick={() => {
+                                            add({
+                                                severitys: ['P0'],
+                                                noticeType: 'FeiShu',
+                                                noticeTmplId: '',
+                                                hook: '',
+                                                headers: [],
+                                                sign: '',
+                                                subject: '',
+                                                to: [],
+                                                cc: []
+                                            })
+                                        }}
+                                        block
+                                        icon={<PlusOutlined/>}
+                                    >
+                                        添加策略
+                                    </Button>
+                                </Form.Item>
+                            </>
+                        )}
+                    </Form.List>
+                </MyFormItem>
+            </Form>
+        </Drawer>
+    )
+}

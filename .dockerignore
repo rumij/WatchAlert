@@ -22,3 +22,7 @@ deploy/docker-compose/mysql
 deploy/docker-compose/redis
 backup
 backups
+
+web/
+dist/
+node_modules/

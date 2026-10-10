@@ -1,0 +1,241 @@
+'use client'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './global.css';
+import { checkUser, loginUser, registerUser, getOidcInfo } from '../api/user';
+import { message } from "antd";
+import { UserManager } from 'oidc-client';
+import logoIcon from "../img/health.svg";
+
+export const Login = () => {
+    const [showOidcButtons, setShowOidcButtons] = useState(false);
+    const [adminExists, setAdminExists] = useState(null); // null: 加载中, false: 不存在, true: 存在
+    const navigate = useNavigate();
+
+    // 检查是否已登录
+    useEffect(() => {
+        const token = localStorage.getItem('Authorization');
+        if (token) {
+            const redirectPath = localStorage.getItem('redirectPath') || '/';
+            localStorage.removeItem('redirectPath');
+            navigate(redirectPath);
+        }
+    }, [navigate]);
+
+    // 检查 admin 用户是否存在
+    useEffect(() => {
+        const checkAdminUser = async () => {
+            try {
+                const params = { identifier: 'admin' };
+                const res = await checkUser(params);
+                console.log(res?.data);
+                // 返回 'ok' 表示用户存在
+                setAdminExists(res?.data === 'ok');
+            } catch (error) {
+                console.error(error);
+                setAdminExists(false);
+            }
+        };
+        checkAdminUser();
+    }, []);
+
+    // 处理普通登录表单提交
+    const onFinish = async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const params = {
+            identifier: formData.get('identifier'),
+            password: formData.get('password'),
+        };
+        try {
+            const response = await loginUser(params);
+            if (response.data) {
+                const info = response.data;
+                localStorage.setItem('Authorization', info.token);
+                localStorage.setItem('Identifier', info.identifier);
+                localStorage.setItem('UserId', info.userId);
+                const redirectPath = localStorage.getItem('redirectPath') || '/';
+                localStorage.removeItem('redirectPath');
+                navigate(redirectPath);
+            }
+        } catch (error) {
+            message.error('用户名或密码错误');
+        }
+    };
+
+    // 处理密码初始化并自动登录（admin 不存在时）
+    const handleInitAndLogin = async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const password = formData.get('password');
+        const confirmPassword = formData.get('confirm-password');
+
+        if (password !== confirmPassword) {
+            message.error('两次输入的密码不一致');
+            return;
+        }
+
+        try {
+            // 1. 注册 admin 用户
+            await registerUser({
+                userid: 'admin',
+                username: 'admin',
+                email: 'admin@qq.com',
+                phone: '18888888888',
+                password: password,
+                role: 'admin',
+            });
+            
+            // 2. 自动登录
+            const loginResponse = await loginUser({
+                identifier: 'admin',
+                password: password,
+            });
+            
+            if (loginResponse.data) {
+                const info = loginResponse.data;
+                localStorage.setItem('Authorization', info.token);
+                localStorage.setItem('Identifier', info.identifier);
+                localStorage.setItem('UserId', info.userId);
+                message.success('初始化成功，已自动登录');
+                const redirectPath = localStorage.getItem('redirectPath') || '/';
+                localStorage.removeItem('redirectPath');
+                navigate(redirectPath);
+            }
+        } catch (error) {
+            console.error(error);
+            message.error('初始化失败，请稍后重试');
+        }
+    };
+
+    const handleOidcLogin = async () => {
+        try {
+            const res = await getOidcInfo();
+            if (res?.data?.authType !== 2) {
+                message.error('OIDC 未启用，请联系管理员');
+                return;
+            }
+
+            const oidcConfig = {
+                authority: res?.data?.upperURI,
+                client_id: res?.data?.clientID,
+                client_secret: res?.data?.clientSecret,
+                redirect_uri: res?.data?.redirectURI,
+                response_type: 'code',
+                scope: 'openid profile email',
+            };
+            const userManager = new UserManager(oidcConfig);
+            userManager.signinRedirect();
+        } catch (error) {
+            console.error('获取 OIDC 信息失败:', error);
+        }
+    }
+
+    return (
+        <div className="min-h-screen flex bg-black text-white">
+            {/* 左侧插画区 */}
+            <div style={{ maxWidth: "60%" }}>
+                <img
+                    src={logoIcon}
+                    alt="WatchAlert Logo"
+                    style={{ height: "700px", borderRadius: "8px",  marginTop: "20px" }}
+                />
+            </div>
+
+            {/* 右侧登录区域 */}
+            <div className="w-full md:w-1/2 flex items-center justify-center px-6 py-12">
+                <div
+                    className="bg-white text-black rounded-2xl shadow-xl w-full max-w-md p-8"
+                >
+                    <h1 className="text-2xl font-medium mb-2">欢迎回来</h1>
+                    <p className="text-gray-600 mb-8">请登录以继续使用 WatchAlert</p>
+                    
+                    {adminExists === null ? (
+                        // 加载中状态
+                        <div className="text-center text-gray-500 py-8">加载中...</div>
+                    ) : !adminExists ? (
+                        // ✅ admin 不存在：显示初始化密码表单（样式保持原结构）
+                        <form onSubmit={handleInitAndLogin} className="space-y-6">
+                            <div>
+                                <input
+                                    type="text"
+                                    name="identifier"
+                                    value="admin"
+                                    readOnly
+                                    placeholder="用户名"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black transition-all bg-gray-50"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="password"
+                                    name="password"
+                                    placeholder="设置密码"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black transition-all"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="password"
+                                    name="confirm-password"
+                                    placeholder="确认密码"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black transition-all"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors"
+                            >
+                                初始化并登陆
+                            </button>
+                        </form>
+                    ) : !showOidcButtons ? (
+                        // ✅ admin 存在：显示普通登录表单（保持原逻辑）
+                        <div>
+                            <form onSubmit={onFinish} className="space-y-6">
+                                <div>
+                                    <input
+                                        type="text"
+                                        name="identifier"
+                                        placeholder="用户名/邮箱/手机号"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black transition-all"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        placeholder="密码"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black transition-all"
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors"
+                                >
+                                    登录
+                                </button>
+                            </form>
+                            <p className="text-black text-center text-sm py-3 rounded-lg cursor-pointer hover:underline" onClick={()=> setShowOidcButtons(true)}>Login using SSO service</p>
+                        </div>
+                    ) : (
+                        // OIDC 登录选项
+                        <div>
+                            <button 
+                                onClick={handleOidcLogin}
+                                className="w-full py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-100 transition-colors text-center"
+                            >
+                                Login with Oidc
+                            </button>
+                            <p className="text-black text-center text-sm py-3 rounded-lg cursor-pointer hover:underline" onClick={()=> setShowOidcButtons(false)}>Login as administrator</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};

@@ -43,15 +43,16 @@ func (ass alertSilenceService) Create(req interface{}) (interface{}, interface{}
 		Status:        1,
 	}
 
-	if r.StartsAt > updateAt {
-		r.Status = 0
+	if err := silence.Validate(updateAt); err != nil {
+		return nil, err
 	}
+	silence.Status = silence.StatusAt(updateAt)
 
-	ass.ctx.Redis.Silence().PushAlertMute(silence)
 	err := ass.ctx.DB.Silence().Create(silence)
 	if err != nil {
 		return nil, err
 	}
+	ass.ctx.Redis.Silence().PushAlertMute(silence)
 
 	return nil, nil
 }
@@ -72,28 +73,27 @@ func (ass alertSilenceService) Update(req interface{}) (interface{}, interface{}
 		Status:        1,
 	}
 
-	if r.StartsAt > r.UpdateAt {
-		r.Status = 0
-	} else {
-		r.Status = 1
+	if err := silence.Validate(silence.UpdateAt); err != nil {
+		return nil, err
 	}
+	silence.Status = silence.StatusAt(silence.UpdateAt)
 
-	ass.ctx.Redis.Silence().PushAlertMute(silence)
 	err := ass.ctx.DB.Silence().Update(silence)
 	if err != nil {
 		return nil, err
 	}
+	ass.ctx.Redis.Silence().PushAlertMute(silence)
 
 	return nil, nil
 }
 
 func (ass alertSilenceService) Delete(req interface{}) (interface{}, interface{}) {
 	r := req.(*types.RequestSilenceQuery)
-	ass.ctx.Redis.Silence().RemoveAlertMute(r.TenantId, r.ID)
 	err := ass.ctx.DB.Silence().Delete(r.TenantId, r.ID)
 	if err != nil {
 		return nil, err
 	}
+	ass.ctx.Redis.Silence().RemoveAlertMute(r.TenantId, r.ID)
 
 	return nil, nil
 }

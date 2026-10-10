@@ -1,0 +1,218 @@
+"use client"
+
+import * as React from "react"
+import {
+    Line,
+    LineChart,
+    CartesianGrid,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+} from "recharts"
+
+import {
+    Typography,
+} from "antd"
+
+const { Text } = Typography
+
+// 为每个 metric 分配不同的颜色
+const METRIC_COLORS = [
+    '#1890ff', // 蓝色
+    '#52c41a', // 绿色
+    '#faad14', // 橙色
+    '#f5222d', // 红色
+    '#722ed1', // 紫色
+    '#13c2c2', // 青色
+    '#eb2f96', // 粉色
+    '#fa8c16', // 深橙色
+]
+
+const getMetricResult = (data) => {
+    if (!data) {
+        return []
+    }
+
+    if (Array.isArray(data)) {
+        return data[0]?.data?.result || []
+    }
+
+    return data?.data?.result || data?.result || []
+}
+
+export const EventMetricChart = ({ data }) => {
+    const result = getMetricResult(data)
+
+    if (!Array.isArray(result) || result.length === 0) {
+        return (
+            <div style={{ textAlign: "center", padding: "40px" }}>
+                <Text type="secondary">暂无指标数据</Text>
+            </div>
+        )
+    }
+
+    // 提取所有时间戳并去重排序
+    const allTimestamps = new Set()
+    result.forEach(item => {
+        if (Array.isArray(item?.values) && item.values.length > 0) {
+            item.values.forEach(([timestamp]) => {
+                const ts = typeof timestamp === 'string' ? parseFloat(timestamp) : timestamp
+                allTimestamps.add(ts)
+            })
+        }
+    })
+    const timestamps = Array.from(allTimestamps).sort((a, b) => a - b)
+
+    const chartData = timestamps.map(timestamp => {
+        const dataPoint = { timestamp }
+
+        result.forEach((item, index) => {
+            const labels = Object.entries(item?.metric || {})
+                .filter(([key]) => key !== '__name__' )
+                .map(([key, value]) => `${key}=${value}`)
+                .join(', ')
+
+            const seriesName = labels ? `{${labels}}` : `series-${index}`
+            const valueEntry = item?.values?.find(([ts]) => {
+                const tsNum = typeof ts === 'string' ? parseFloat(ts) : ts
+                return tsNum === timestamp
+            })
+            dataPoint[seriesName] = valueEntry ? parseFloat(valueEntry[1]) : null
+        })
+
+        return dataPoint
+    })
+
+    const seriesNames = result.map((item, index) => {
+        const labels = Object.entries(item?.metric || {})
+            .filter(([key]) => key !== '__name__')
+            .map(([key, value]) => `${key}=${value}`)
+            .join(', ')
+
+        return labels ? `{${labels}}` : `series-${index}`
+    })
+
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                    {seriesNames?.map((name, index) => (
+                        <linearGradient
+                            key={`gradient-${index}`}
+                            id={`color-${index}`}
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                        >
+                            <stop
+                                offset="5%"
+                                stopColor={METRIC_COLORS[index % METRIC_COLORS.length]}
+                                stopOpacity={0.3}
+                            />
+                            <stop
+                                offset="95%"
+                                stopColor={METRIC_COLORS[index % METRIC_COLORS.length]}
+                                stopOpacity={0}
+                            />
+                        </linearGradient>
+                    ))}
+                </defs>
+
+                <CartesianGrid
+                    vertical={false}
+                    strokeDasharray="3 3"
+                    stroke="#e8e8e8"
+                />
+
+                <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={(value) => {
+                        const date = new Date(value * 1000)
+                        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+                    }}
+                    axisLine={{ stroke: '#d9d9d9' }}
+                    tickLine={false}
+                    tickMargin={8}
+                    tick={{ fill: "#666", fontSize: 12 }}
+                />
+
+                <YAxis
+                    axisLine={{ stroke: '#d9d9d9' }}
+                    tickLine={false}
+                    tick={{ fill: "#666", fontSize: 12 }}
+                    tickFormatter={(value) => {
+                        if (Math.abs(value) >= 1000000) {
+                            return `${(value / 1000000).toFixed(1)}M`;
+                        } else if (Math.abs(value) >= 1000) {
+                            return `${(value / 1000).toFixed(1)}K`;
+                        } else {
+                            return value;
+                        }
+                    }}
+                />
+
+                <Tooltip
+                    contentStyle={{
+                        backgroundColor: "#000000",
+                        borderRadius: 8,
+                        border: "none",
+                        padding: "12px",
+                        maxWidth: '1000px',
+                        maxHeight: '1000px',
+                        overflowY: 'auto',
+                        overflowX: 'auto',
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-word',
+                        zIndex: 9999,
+                    }}
+                    isAnimationActive={false}
+                    filterNull={false}
+                    itemStyle={{
+                        color: "#ffffff",
+                        fontSize: "12px",
+                        padding: "2px 0",
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-all',
+                        lineHeight: '1.5',
+                    }}
+                    labelStyle={{
+                        color: "#ffffff",
+                        fontWeight: "500",
+                        marginBottom: "4px",
+                        whiteSpace: 'normal',
+                    }}
+                    labelFormatter={(label) => {
+                        const date = new Date(label * 1000)
+                        return `时间: ${date.toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        })}`
+                    }}
+                    formatter={(value, name) => {
+                        if (value === null || value === undefined) return ['无数据', name]
+                        return [typeof value === 'number' ? value.toFixed(2) : value, name]
+                    }}
+                />
+
+                {seriesNames?.map((name, index) => (
+                    <Line
+                        key={name}
+                        type="monotone"
+                        dataKey={name}
+                        stroke={METRIC_COLORS[index % METRIC_COLORS.length]}
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                        connectNulls={false}
+                    />
+                ))}
+            </LineChart>
+        </ResponsiveContainer>
+    )
+}

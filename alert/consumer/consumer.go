@@ -175,8 +175,6 @@ func (c *Consume) executeTask(faultCenter models.FaultCenter, taskChan chan stru
 		// 释放任务信号量
 		<-taskChan
 	}()
-	// 处理静默规则
-	c.processSilenceRule(faultCenter)
 	// 获取故障中心的所有告警事件
 	data, err := c.ctx.Redis.Alert().GetAllEvents(models.BuildAlertEventCacheKey(faultCenter.TenantId, faultCenter.ID))
 	if err != nil {
@@ -295,48 +293,6 @@ func (c *Consume) RestartAllConsumers() {
 	for _, fc := range list {
 		c.ctx.Redis.FaultCenter().PushFaultCenterInfo(fc)
 		c.Submit(fc)
-	}
-}
-
-func (c *Consume) processSilenceRule(faultCenter models.FaultCenter) {
-	currentTime := time.Now().Unix()
-	silenceCtx := c.ctx.Redis.Silence()
-	// 获取静默列表中所有的id
-	silenceIds, err := silenceCtx.GetAlertMutes(faultCenter.TenantId)
-	if err != nil {
-		logc.Error(ctx.Ctx, err.Error())
-		return
-	}
-
-	// 根据ID获取到详细的静默规则
-	for _, silenceId := range silenceIds {
-		muteRule, err := silenceCtx.WithIdGetMuteFromCache(faultCenter.TenantId, silenceId)
-		if err != nil {
-			logc.Error(ctx.Ctx, err.Error())
-			return
-		}
-
-		// 如果当前状态为「未生效」，并且生效时间大于等于当前时间，则标记为「生效中」状态
-		if muteRule.Status == 0 && currentTime >= muteRule.StartsAt {
-			muteRule.Status = 1
-			err := c.ctx.DB.Silence().Update(*muteRule)
-			if err != nil {
-				logc.Error(c.ctx.Ctx, fmt.Sprintf("Update silence rule failed, err: %s", err.Error()))
-				return
-			}
-		}
-
-		// 如果到达失效日期，则标记「已失效」状态
-		if muteRule.EndsAt <= currentTime {
-			muteRule.Status = 2
-			err := c.ctx.DB.Silence().Update(*muteRule)
-			if err != nil {
-				logc.Error(c.ctx.Ctx, fmt.Sprintf("Update silence rule failed, err: %s", err.Error()))
-				return
-			}
-		}
-
-		silenceCtx.PushAlertMute(*muteRule)
 	}
 }
 

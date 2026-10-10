@@ -29,11 +29,9 @@ func handleAlert(ctx *ctx.Context, processType string, faultCenter models.FaultC
 		return err
 	}
 
-	// 按告警等级分组
-	severityGroups := make(map[string][]*models.AlertCurEvent)
-	for _, alert := range alerts {
-		severityGroups[alert.Severity] = append(severityGroups[alert.Severity], alert)
-	}
+	// Filter individual events before aggregation so one silence cannot hide
+	// unrelated events, or leak through an unmuted representative event.
+	severityGroups := groupUnmutedAlerts(faultCenter, alerts)
 
 	// 告警聚合
 	var aggregationEvents map[string][]*models.AlertCurEvent
@@ -62,12 +60,7 @@ func handleAlert(ctx *ctx.Context, processType string, faultCenter models.FaultC
 					continue
 				}
 
-				if mute.IsMuted(mute.MuteParams{
-					IsRecovered:   event.IsRecovered,
-					TenantId:      event.TenantId,
-					Labels:        event.Labels,
-					RecoverNotify: faultCenter.RecoverNotify,
-				}) {
+				if mute.IsMuted(mute.ParamsForEvent(event, faultCenter.RecoverNotify)) {
 					continue
 				}
 
@@ -144,6 +137,17 @@ func handleAlert(ctx *ctx.Context, processType string, faultCenter models.FaultC
 	}
 
 	return g.Wait()
+}
+
+func groupUnmutedAlerts(faultCenter models.FaultCenter, alerts []*models.AlertCurEvent) map[string][]*models.AlertCurEvent {
+	groups := make(map[string][]*models.AlertCurEvent)
+	for _, event := range alerts {
+		if event == nil || event.Fingerprint == "" || isMutedEvent(event, faultCenter) {
+			continue
+		}
+		groups[event.Severity] = append(groups[event.Severity], event)
+	}
+	return groups
 }
 
 // alarmAggregation 告警聚合

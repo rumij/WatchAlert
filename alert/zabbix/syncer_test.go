@@ -236,6 +236,123 @@ func TestSyncRouteRequiresVerifiedRecovery(t *testing.T) {
 	}
 }
 
+func sharedRecoveryTestClient(t *testing.T) *provider.ZabbixClient {
+	t.Helper()
+	events := map[string]provider.ZabbixEvent{
+		"1001": {EventID: "1001", RecoveryEventID: "9001"},
+		"1002": {EventID: "1002", RecoveryEventID: "9001"},
+		"1003": {EventID: "1003", RecoveryEventID: "9002"},
+		"1004": {EventID: "1004", RecoveryEventID: "0"},
+		"9001": {EventID: "9001", Clock: "1700000100"},
+		"9002": {EventID: "9002", Clock: "1700000200"},
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			ID     uint64 `json:"id"`
+			Method string `json:"method"`
+			Params struct {
+				EventIDs []string `json:"eventids"`
+			} `json:"params"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			return
+		}
+		if request.Method != "event.get" {
+			t.Errorf("unexpected method: %s", request.Method)
+			return
+		}
+		result := make([]provider.ZabbixEvent, 0, len(request.Params.EventIDs))
+		for _, id := range request.Params.EventIDs {
+			if event, ok := events[id]; ok {
+				result = append(result, event)
+			}
+		}
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"jsonrpc": "2.0", "id": request.ID, "result": result}); err != nil {
+			t.Error(err)
+		}
+	}))
+	t.Cleanup(server.Close)
+	client, err := provider.NewZabbixClient(models.AlertDataSource{
+		HTTP: models.HTTP{URL: server.URL}, ZabbixConfig: models.DsZabbixConfig{APIToken: "test-token"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return client
+}
+
+func TestSyncRouteSharedRecovery(t *testing.T) {
+	client := sharedRecoveryTestClient(t)
+	alerts := &zabbixTestAlertCache{events: make(map[string]*models.AlertCurEvent)}
+	for _, id := range []string{"1001", "1002", "1003", "1004"} {
+		fingerprint := "zabbix:ds-1:" + id
+		alerts.events[fingerprint] = &models.AlertCurEvent{
+			TenantId: "tenant-1", DatasourceType: provider.ZabbixDsProviderName,
+			DatasourceId: "ds-1", EventId: "zbx-ds-1-" + id, RuleGroupId: "zabbix",
+			Fingerprint: fingerprint, Labels: map[string]interface{}{"zabbix_eventid": id},
+		}
+	}
+	s := &Syncer{ctx: &appctx.Context{Ctx: context.Background(), Redis: &zabbixTestEntryCache{alerts: alerts}}}
+	_, recovered, _, ok := s.syncRoute(context.Background(), models.AlertDataSource{TenantId: "tenant-1", ID: "ds-1"}, eventRoute{faultCenter: models.FaultCenter{ID: "fc-1"}}, nil, nil, false, nil, nil, client)
+	if !ok || recovered != 3 {
+		t.Fatalf("all three verified problems must recover in one sync: recovered=%d, ok=%v", recovered, ok)
+	}
+	for id, wantTime := range map[string]int64{"1001": 1700000100, "1002": 1700000100, "1003": 1700000200, "1004": 0} {
+		event := alerts.events["zabbix:ds-1:"+id]
+		if event.IsRecovered != (wantTime != 0) || event.RecoverTime != wantTime {
+			t.Errorf("event %s: recovered=%v, time=%d; want time=%d", id, event.IsRecovered, event.RecoverTime, wantTime)
+		}
+	}
+}
+
+func TestBackfillSharedRecovery(t *testing.T) {
+	client := sharedRecoveryTestClient(t)
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	defer sqlDB.Close()
+	if err := db.AutoMigrate(&models.AlertHisEvent{}); err != nil {
+		t.Fatal(err)
+	}
+	s := &Syncer{ctx: &appctx.Context{Ctx: context.Background(), DB: &liveZabbixTestRepo{zabbixTestRepo: zabbixTestRepo{db: db}}}}
+	problems := []provider.ZabbixProblem{
+		{EventID: "1001", RecoveryEventID: "9001", Clock: "1700000000"},
+		{EventID: "1002", RecoveryEventID: "9001", Clock: "1700000000"},
+		{EventID: "1003", RecoveryEventID: "9002", Clock: "1700000000"},
+		{EventID: "1004", RecoveryEventID: "0", Clock: "1700000000"},
+	}
+	for attempt, wantCount := range []int{3, 0} {
+		count, ok := s.recordRecoveredHistory(models.AlertDataSource{TenantId: "tenant-1", ID: "ds-1"}, models.FaultCenter{ID: "fc-1"}, problems, nil, nil, nil, nil, client, context.Background(), nil)
+		if !ok || count != wantCount {
+			t.Fatalf("attempt %d: backfilled=%d, ok=%v; want %d", attempt, count, ok, wantCount)
+		}
+	}
+	var history []models.AlertHisEvent
+	if err := db.Find(&history).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(history) != 3 {
+		t.Fatalf("expected three unique recovered events, got %d", len(history))
+	}
+	wantTimes := map[string]int64{"zbx-ds-1-1001": 1700000100, "zbx-ds-1-1002": 1700000100, "zbx-ds-1-1003": 1700000200}
+	for _, event := range history {
+		if want, ok := wantTimes[event.EventId]; !ok || event.RecoverTime != want {
+			t.Errorf("unexpected history event: id=%s, recovery=%d", event.EventId, event.RecoverTime)
+		}
+		delete(wantTimes, event.EventId)
+	}
+	if len(wantTimes) != 0 {
+		t.Errorf("missing history events: %v", wantTimes)
+	}
+}
+
 func TestBuildEventKeepsZabbixIdentityAndOriginalSeverity(t *testing.T) {
 	event := buildEvent(
 		models.AlertDataSource{

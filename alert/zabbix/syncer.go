@@ -503,10 +503,8 @@ func (s *Syncer) recordRecoveredHistory(
 		return 0, true
 	}
 
-	recoveryToProblem := make(map[string]string, len(completed))
 	recoveryIDs := make([]string, 0, len(completed))
 	for _, problem := range completed {
-		recoveryToProblem[problem.RecoveryEventID] = problem.EventID
 		recoveryIDs = append(recoveryIDs, problem.RecoveryEventID)
 	}
 	recoveryEvents, err := client.GetEvents(runCtx, uniqueStrings(recoveryIDs))
@@ -516,13 +514,13 @@ func (s *Syncer) recordRecoveredHistory(
 	}
 	recoveryTimes := make(map[string]int64, len(recoveryEvents))
 	for _, recovery := range recoveryEvents {
-		recoveryTimes[recoveryToProblem[recovery.EventID]] = parseUnix(recovery.Clock)
+		recoveryTimes[recovery.EventID] = parseUnix(recovery.Clock)
 	}
 
 	backfilled := 0
 	allOK := true
 	for _, problem := range completed {
-		recoverAt := recoveryTimes[problem.EventID]
+		recoverAt := recoveryTimes[problem.RecoveryEventID]
 		if recoverAt == 0 {
 			allOK = false
 			continue
@@ -562,22 +560,27 @@ func (s *Syncer) getRecoveryTimes(runCtx context.Context, client *provider.Zabbi
 		logc.Errorf(s.ctx.Ctx, "Zabbix event.get 查询恢复关系失败: %v", err)
 		return nil, err
 	}
-	recoveryToProblem := make(map[string]string)
 	var recoveryIDs []string
 	for _, event := range problemEvents {
 		if event.RecoveryEventID == "" || event.RecoveryEventID == "0" {
 			continue
 		}
-		recoveryToProblem[event.RecoveryEventID] = event.EventID
 		recoveryIDs = append(recoveryIDs, event.RecoveryEventID)
 	}
-	recoveryEvents, err := client.GetEvents(runCtx, recoveryIDs)
+	recoveryEvents, err := client.GetEvents(runCtx, uniqueStrings(recoveryIDs))
 	if err != nil {
 		logc.Errorf(s.ctx.Ctx, "Zabbix event.get 查询恢复时间失败: %v", err)
 		return nil, err
 	}
+	recoveryTimes := make(map[string]int64, len(recoveryEvents))
 	for _, event := range recoveryEvents {
-		result[recoveryToProblem[event.EventID]] = parseUnix(event.Clock)
+		recoveryTimes[event.EventID] = parseUnix(event.Clock)
+	}
+	// One OK event can close several problems generated in Multiple mode.
+	for _, problem := range problemEvents {
+		if recoverAt := recoveryTimes[problem.RecoveryEventID]; recoverAt != 0 {
+			result[problem.EventID] = recoverAt
+		}
 	}
 	return result, nil
 }
@@ -603,6 +606,8 @@ func buildEventForRule(datasource models.AlertDataSource, faultCenter models.Fau
 	labels["source"] = "zabbix"
 	labels["zabbix_eventid"] = problem.EventID
 	labels["zabbix_triggerid"] = problem.ObjectID
+	labels["zabbix_problem_name"] = problem.Name
+	labels["zabbix_trigger_name"] = trigger.Description
 	labels["zabbix_severity"] = problem.Severity
 	labels["zabbix_severity_name"] = zabbixSeverityName(problem.Severity)
 	labels["zabbix_acknowledged"] = problem.Acknowledged == "1"
