@@ -28,3 +28,12 @@
 total_files=201, reviewed_files=39, skipped_files=162, coverage_rate=19.40%。前后端 linux/amd64 生产镜像均构建成功；修复锁文件后容器内 13 项前端测试通过，nginx 配置检查、登录页 HTTP 200 和 API 代理认证响应 401 通过。后端使用全新隔离 SQLite 与 Redis 启动，/hello HTTP 200；离线双镜像包已导出并生成 SHA256 校验文件。仓库既有 vet 与前端构建警告不在本次修复范围。生产升级未执行。
 
 发布格式检查：后端及发布脚本无空白错误；首次导入的前端基线存在既有尾随空白，未做全仓格式化。
+
+## 旧 Docker 前端兼容修复补充审查
+
+新增范围：web/Dockerfile.compat、deploy/docker-compose/rebuild-frontend-compat.sh、升级文档及本记录。重新运行 OCR delegate preview/rule，按实际解析的 default 规则审查脚本；OCR 默认排除的两份 Markdown 和 Dockerfile.compat 另做人工补充审查，并核对文档内 YAML 与实际业务条件：本地镜像预检、单独输出标签、静态资源及代理模板完整复制、构建不修改运行容器、仅重新创建前端、保持原配置和备份。total_files=4, reviewed_files=4, skipped_files=0, coverage_rate=100%。没有未解决的 Critical/High 问题。
+
+- 故障模拟：仅在本地测试容器中拒绝 pwritev2 并返回 EPERM；原 Alpine 前端出现同样 pwrite/nginx.pid 错误，退出码 1。
+- 兼容镜像：保留既有 nginx/1.27.5 运行底座，原样复制新版前端静态资源及模板；相同故障策略下持续运行，nginx -t、/login HTML 和 API 401 认证响应通过。
+- 脚本通过 bash -n 和实际本地镜像构建；旧镜像静态目录和模板处理脚本存在。未重新运行无修改的 Go/React 业务测试。
+- 尚未在用户的 Linux 3.10.0-957 主机上实际验证；主机原因依据日志与官方问题记录判断，并非已取得系统调用跟踪。保留旧底座的安全维护责任，没有关闭生产 seccomp 或增加 privileged。

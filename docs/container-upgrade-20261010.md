@@ -135,3 +135,36 @@ docker compose -f compose.yaml -f rollback-app.yaml up -d --no-deps --no-build -
 Go 相关包测试使用 `-vet=off`，仓库既有 notice/probing vet 问题未在本次修改；前端保留既有构建警告。生产环境升级和真实通知投递尚未执行。完整导入前端基线未做全仓业务审计；本次审查聚焦静默功能、恢复同步和发布入口，见发布审查记录。
 
 参考：[Docker Compose up](https://docs.docker.com/reference/cli/docker/compose/up/)、[镜像离线保存](https://docs.docker.com/reference/cli/docker/image/save/)、[卷备份与恢复](https://docs.docker.com/engine/storage/volumes/#back-up-restore-or-migrate-data-volumes)。
+
+## 旧服务器前端反复重启的兼容修复
+
+若后端健康，但前端日志出现 `pwrite() "/run/nginx.pid" failed (1: Operation not permitted)`，不应将 Started 当作前端验收通过。较新的 Alpine/musl 可能使用被旧 Docker/seccomp 策略拒绝的 pwritev2；仅凭报错还不能证明主机实际拦截方式。相同现象和调用差异见 [NGINX 官方镜像问题记录](https://github.com/nginx/docker-nginx/issues/1059)。
+
+已有可正常运行的旧前端镜像时，可保留其运行底座，将新版静态页面及代理模板移入新标签。这样不需要关闭 seccomp、不增加 privileged，也不需要从互联网拉取另一套依赖。旧底座的后续安全更新仍需纳入主机维护；这是现有环境的兼容路径，不代表已经验证所有旧内核。
+
+先按前文把旧镜像标记为 `watchalert-frontend:before-silence`，确认原镜像包含 `/usr/share/nginx/html` 和 `/docker-entrypoint.d/20-envsubst-on-templates.sh`。在有本仓库源码的机器运行：
+
+```bash
+bash deploy/docker-compose/rebuild-frontend-compat.sh
+```
+
+默认读取已经导入的新版页面镜像 `watchalert-frontend:zabbix-silence-20261010`，以本地已验证的旧运行底座 `watchalert-frontend:before-silence` 构建 `watchalert-frontend:zabbix-silence-20261010-compat`。三个镜像名也可按顺序显式传给脚本；输出标签不能覆盖任一输入镜像。该脚本只构建镜像，不改正在运行的容器。
+
+建立一个只覆盖前端的文件 `frontend-compat.yaml`：
+
+```yaml
+services:
+  w8t-web:
+    image: watchalert-frontend:zabbix-silence-20261010-compat
+```
+
+沿用本机已有的升级文件；若此前通过 `upgrade-silence.yaml` 适配了 config.yaml.template 的旧部署，必须保留它。以下示例使用该文件：
+
+```bash
+docker compose -f docker-compose.yml -f upgrade-silence.yaml -f frontend-compat.yaml config --quiet
+docker compose -f docker-compose.yml -f upgrade-silence.yaml -f frontend-compat.yaml up -d --no-deps --no-build --pull never --force-recreate w8t-web
+```
+
+只有前端重新创建，后端与数据服务继续运行。等待后查看 ps、前端最新日志，再通过实际 Web 端口核验 /login HTTP 200、登录和静默页面。之后所有更新命令均沿用这三个配置文件，否则前端可能被切回原镜像。
+
+本地以拒绝 pwritev2 并返回 EPERM 的测试策略重现了原前端退出码 1；兼容镜像在相同策略下保持运行。此策略仅用于本地故障模拟，不提供给生产部署使用。服务器上的实际旧内核与 Docker 仍需用户执行后验证。

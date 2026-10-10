@@ -1,0 +1,7 @@
+ARG ASSET_IMAGE=watchalert-frontend:zabbix-silence-20261010
+ARG RUNTIME_IMAGE=watchalert-frontend:before-silence
+FROM ${ASSET_IMAGE} AS assets
+FROM ${RUNTIME_IMAGE}
+ENV WATCHALERT_BACKEND_HOST=w8t-service WATCHALERT_BACKEND_PORT=9001
+COPY --from=assets /usr/share/nginx/html/ /usr/share/nginx/html/
+COPY --from=assets /etc/nginx/templates/default.conf.template /etc/nginx/templates/default.conf.template
