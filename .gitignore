@@ -63,3 +63,6 @@ backups/
 
 /web/build/
 /web/coverage/
+
+# Generated GHCR deployment configuration
+/deploy/ghcr/config/

@@ -1,0 +1,93 @@
+# New installations only. Existing deployments must retain their original project and volumes.
+services:
+  w8t-mysql:
+    image: ghcr.io/rumij/watchalert-mysql:8.0.46
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run bash prepare.sh first}
+      MYSQL_DATABASE: watchalert
+      MYSQL_USER: watchalert
+      MYSQL_PASSWORD: ${WATCHALERT_DB_PASSWORD:?Run bash prepare.sh first}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP -h 127.0.0.1 -u watchalert -D watchalert -Nse "SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [watchalert]
+
+  w8t-redis:
+    image: ghcr.io/rumij/watchalert-redis:7.4.11-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [watchalert]
+
+  w8t-service:
+    image: ghcr.io/rumij/watchalert-backend:${WATCHALERT_RELEASE_TAG:?Run bash prepare.sh first}
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+    depends_on:
+      w8t-mysql:
+        condition: service_healthy
+      w8t-redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:9001/hello']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    networks: [watchalert]
+
+  init-mysql:
+    image: ghcr.io/rumij/watchalert-mysql:8.0.46
+    restart: 'no'
+    environment:
+      MYSQL_PWD: ${WATCHALERT_DB_PASSWORD:?Run bash prepare.sh first}
+    volumes:
+      - ../helmchart/files/sql:/sql:ro
+      - ./init-db.sh:/init-db.sh:ro
+    entrypoint: [sh, /init-db.sh]
+    depends_on:
+      w8t-service:
+        condition: service_healthy
+    networks: [watchalert]
+
+  w8t-web:
+    image: ghcr.io/rumij/watchalert-frontend:${WATCHALERT_RELEASE_TAG:?Run bash prepare.sh first}${WATCHALERT_FRONTEND_SUFFIX:-}
+    restart: unless-stopped
+    environment:
+      WATCHALERT_BACKEND_HOST: w8t-service
+      WATCHALERT_BACKEND_PORT: '9001'
+      TZ: Asia/Shanghai
+    ports:
+      - '${WATCHALERT_BIND_ADDRESS:-0.0.0.0}:${WATCHALERT_HTTP_PORT:-8088}:80'
+    depends_on:
+      init-mysql:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1/login']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [watchalert]
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  watchalert:

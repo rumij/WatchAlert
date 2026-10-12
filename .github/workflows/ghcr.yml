@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+      - 'deploy/ghcr/**'
+      - '.github/workflows/ghcr-dependencies.yml'
   workflow_dispatch:
 
 permissions:
@@ -64,20 +66,39 @@ jobs:
             org.opencontainers.image.licenses=AGPL-3.0
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
-      - name: Promote both successful builds
+      - name: Build and push frontend for legacy hosts
+        id: compat
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile.compat
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.frontend }}:${{ steps.meta.outputs.tag }}-compat
+          build-args: |
+            ASSET_IMAGE=${{ steps.meta.outputs.frontend }}:${{ steps.meta.outputs.tag }}
+            RUNTIME_IMAGE=docker.io/library/nginx@sha256:62223d644fa234c3a1cc785ee14242ec47a77364226f1c811d2f669f96dc2ac8
+          labels: |
+            org.opencontainers.image.source=https://github.com/rumij/WatchAlert
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Legacy-host compatibility frontend with nginx 1.27.5 runtime; prefer the standard image on modern hosts.
+      - name: Promote successful builds
         env:
           BACKEND: ${{ steps.meta.outputs.backend }}
           FRONTEND: ${{ steps.meta.outputs.frontend }}
           BACKEND_DIGEST: ${{ steps.backend.outputs.digest }}
           FRONTEND_DIGEST: ${{ steps.frontend.outputs.digest }}
+          COMPAT_DIGEST: ${{ steps.compat.outputs.digest }}
           VERSION_TAG: ${{ steps.meta.outputs.tag }}
         run: |
           docker buildx imagetools create --tag "$BACKEND:latest" "$BACKEND@$BACKEND_DIGEST"
           docker buildx imagetools create --tag "$FRONTEND:latest" "$FRONTEND@$FRONTEND_DIGEST"
+          docker buildx imagetools create --tag "$FRONTEND:compat" "$FRONTEND@$COMPAT_DIGEST"
           {
             echo '## Paired images (linux/amd64)'
             echo "- $BACKEND:$VERSION_TAG"
             echo "- $FRONTEND:$VERSION_TAG"
+            echo "- $FRONTEND:$VERSION_TAG-compat (legacy hosts)"
             echo ''
             echo 'Pin the same sha tag for both services. latest tags update separately.'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -24,6 +24,8 @@
 
 公网镜像发布到 **GHCR**：`ghcr.io/rumij/watchalert-backend` 和 `ghcr.io/rumij/watchalert-frontend`，支持拉取后直接更新已有容器，见 [GHCR 简洁更新说明](docs/ghcr-upgrade.md)。
 
+新服务器可使用 [GHCR 完整部署包](deploy/ghcr/README.md)，前后端、MySQL、Redis 统一从 GHCR 拉取，包含自动生成密码、数据库初始化及可选的旧宿主机兼容前端。
+
 以下徽章展示上游项目信息。
 
 <p align="center">
