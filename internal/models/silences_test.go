@@ -1,6 +1,27 @@
 package models
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+func TestSilenceLabelsAcceptLegacyZabbixScalars(t *testing.T) {
+	var labels []SilenceLabel
+	input := `[{"key":"zabbix_item_count","operator":"=","value":3},{"key":"zabbix_suppressed","operator":"=","value":true},{"key":"zabbix_triggerid","operator":"=","value":"82401"}]`
+	if err := json.Unmarshal([]byte(input), &labels); err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []string{"3", "true", "82401"} {
+		if labels[i].Value != want {
+			t.Fatalf("label %d value = %q, want %q", i, labels[i].Value, want)
+		}
+	}
+	for _, invalid := range []string{`{"key":"x","operator":"=","value":null}`, `{"key":"x","operator":"=","value":[]}`} {
+		if err := json.Unmarshal([]byte(invalid), new(SilenceLabel)); err == nil {
+			t.Fatalf("accepted invalid condition value: %s", invalid)
+		}
+	}
+}
 
 func TestSilenceWindowAndValidation(t *testing.T) {
 	s := AlertSilences{StartsAt: 100, EndsAt: 200, Labels: []SilenceLabel{{Key: "instance", Operator: "=", Value: "core"}}}
@@ -22,6 +43,8 @@ func TestSilenceWindowAndValidation(t *testing.T) {
 		{"reversed", func(s *AlertSilences) { s.EndsAt = 99 }},
 		{"expired", func(s *AlertSilences) { s.EndsAt = 150 }},
 		{"empty conditions", func(s *AlertSilences) { s.Labels = nil }},
+		{"empty value", func(s *AlertSilences) { s.Labels = []SilenceLabel{{Key: "instance", Operator: "==", Value: ""}} }},
+		{"blank regex", func(s *AlertSilences) { s.Labels = []SilenceLabel{{Key: "instance", Operator: "=~", Value: "  "}} }},
 		{"invalid regex", func(s *AlertSilences) { s.Labels = []SilenceLabel{{Key: "instance", Operator: "=~", Value: "["}} }},
 		{"unknown operator", func(s *AlertSilences) {
 			s.Labels = []SilenceLabel{{Key: "instance", Operator: "unsupported", Value: "core"}}

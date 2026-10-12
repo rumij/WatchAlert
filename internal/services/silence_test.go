@@ -20,23 +20,87 @@ func (r *silenceServiceRepo) Silence() repo.InterSilenceRepo { return r.silence 
 
 type silenceServiceStore struct {
 	repo.InterSilenceRepo
-	saved models.AlertSilences
-	err   error
+	saved     models.AlertSilences
+	err       error
+	commitErr error
 }
 
 func (r *silenceServiceStore) Create(s models.AlertSilences) error { r.saved = s; return r.err }
 func (r *silenceServiceStore) Update(s models.AlertSilences) error { r.saved = s; return r.err }
 func (r *silenceServiceStore) Delete(string, string) error         { return r.err }
 
-type silenceServiceCache struct {
-	cache.InterEntryCache
-	saved   *models.AlertSilences
-	removed bool
+func (r *silenceServiceStore) Get(string, string) (*models.AlertSilences, error) {
+	copy := r.saved
+	return &copy, r.err
 }
 
-func (c *silenceServiceCache) Silence() cache.SilenceCacheInterface   { return c }
-func (c *silenceServiceCache) PushAlertMute(s models.AlertSilences)   { c.saved = &s }
-func (c *silenceServiceCache) RemoveAlertMute(string, string)         { c.removed = true }
+func (r *silenceServiceStore) WithTransaction(fn func(repo.InterSilenceRepo) error) error {
+	previous := r.saved
+	err := fn(r)
+	if err == nil {
+		err = r.commitErr
+	}
+	if err != nil {
+		r.saved = previous
+	}
+	return err
+}
+
+func TestSilenceServiceCacheFailureRollsBackAndCommitFailureRestoresCache(t *testing.T) {
+	now := time.Now().Unix()
+	old := models.AlertSilences{TenantId: "t", ID: "s", Name: "old", StartsAt: now, EndsAt: now + 600,
+		Labels: []models.SilenceLabel{{Key: "instance", Value: "core", Operator: "=="}}}
+	for _, op := range []string{"create", "update", "delete"} {
+		t.Run(op, func(t *testing.T) {
+			store := &silenceServiceStore{saved: old}
+			c := &silenceServiceCache{saved: &old, writeErr: errors.New("Redis unavailable")}
+			service := newInterSilenceService(&ctx.Context{DB: &silenceServiceRepo{silence: store}, Redis: c})
+			var err interface{}
+			switch op {
+			case "create":
+				_, err = service.Create(&types.RequestSilenceCreate{TenantId: "t", Name: "new", StartsAt: now, EndsAt: now + 600, Labels: old.Labels})
+			case "update":
+				_, err = service.Update(&types.RequestSilenceUpdate{TenantId: "t", ID: "s", Name: "new", StartsAt: now, EndsAt: now + 600, Labels: old.Labels})
+			case "delete":
+				_, err = service.Delete(&types.RequestSilenceQuery{TenantId: "t", ID: "s"})
+			}
+			if err == nil || store.saved.Name != "old" || c.saved.Name != "old" || c.removed {
+				t.Fatal("cache failure was accepted or changed the previous state")
+			}
+		})
+	}
+	store := &silenceServiceStore{saved: old, commitErr: errors.New("commit failed")}
+	c := &silenceServiceCache{saved: &old}
+	service := newInterSilenceService(&ctx.Context{DB: &silenceServiceRepo{silence: store}, Redis: c})
+	_, err := service.Update(&types.RequestSilenceUpdate{TenantId: "t", ID: "s", Name: "new", StartsAt: now, EndsAt: now + 600, Labels: old.Labels})
+	if err == nil || store.saved.Name != "old" || c.saved.Name != "old" {
+		t.Fatal("commit failure did not restore the old cache value")
+	}
+}
+
+type silenceServiceCache struct {
+	cache.InterEntryCache
+	saved    *models.AlertSilences
+	removed  bool
+	writeErr error
+}
+
+func (c *silenceServiceCache) Silence() cache.SilenceCacheInterface { return c }
+func (c *silenceServiceCache) PushAlertMute(s models.AlertSilences) error {
+	if c.writeErr != nil {
+		return c.writeErr
+	}
+	c.saved = &s
+	return nil
+}
+func (c *silenceServiceCache) RemoveAlertMute(string, string) error {
+	if c.writeErr != nil {
+		return c.writeErr
+	}
+	c.removed = true
+	c.saved = nil
+	return nil
+}
 func (c *silenceServiceCache) GetAlertMutes(string) ([]string, error) { return nil, nil }
 func (c *silenceServiceCache) WithIdGetMuteFromCache(string, string) (*models.AlertSilences, error) {
 	return c.saved, nil

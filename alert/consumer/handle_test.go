@@ -54,8 +54,8 @@ func (c *silenceAggregationCache) GetAlertMutes(string) ([]string, error) {
 func (c *silenceAggregationCache) WithIdGetMuteFromCache(string, string) (*models.AlertSilences, error) {
 	return &c.rule, nil
 }
-func (c *silenceAggregationCache) PushAlertMute(models.AlertSilences) {}
-func (c *silenceAggregationCache) RemoveAlertMute(string, string)     {}
+func (c *silenceAggregationCache) PushAlertMute(models.AlertSilences) error { return nil }
+func (c *silenceAggregationCache) RemoveAlertMute(string, string) error     { return nil }
 
 func TestSingleSilenceBeforeAggregationAndUpgrade(t *testing.T) {
 	now := time.Now().Unix()

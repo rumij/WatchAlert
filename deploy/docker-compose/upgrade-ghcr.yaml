@@ -1,0 +1,10 @@
+# 与原来的 compose 文件合并使用，保留原项目名、配置、端口和数据挂载。
+# 正式升级推荐将 WATCHALERT_RELEASE_TAG 设置为同一个 sha-<完整提交号>。
+services:
+  w8t-service:
+    image: ghcr.io/rumij/watchalert-backend:${WATCHALERT_RELEASE_TAG:-latest}
+  w8t-web:
+    image: ghcr.io/rumij/watchalert-frontend:${WATCHALERT_RELEASE_TAG:-latest}
+    environment:
+      WATCHALERT_BACKEND_HOST: w8t-service
+      WATCHALERT_BACKEND_PORT: "9001"

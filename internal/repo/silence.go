@@ -13,12 +13,26 @@ type (
 	}
 
 	InterSilenceRepo interface {
+		WithTransaction(func(InterSilenceRepo) error) error
+		Get(tenantId, id string) (*models.AlertSilences, error)
 		List(tenantId, faultCenterId, query string, status string, page models.Page) ([]models.AlertSilences, int64, error)
 		Create(r models.AlertSilences) error
 		Update(r models.AlertSilences) error
 		Delete(tenantId, id string) error
 	}
 )
+
+func (sr SilenceRepo) WithTransaction(fn func(InterSilenceRepo) error) error {
+	return sr.db.Transaction(func(tx *gorm.DB) error {
+		return fn(newSilenceInterface(tx, NewInterGormDBCli(tx)))
+	})
+}
+
+func (sr SilenceRepo) Get(tenantId, id string) (*models.AlertSilences, error) {
+	var silence models.AlertSilences
+	err := sr.db.Where("tenant_id = ? AND id = ?", tenantId, id).First(&silence).Error
+	return &silence, err
+}
 
 func newSilenceInterface(db *gorm.DB, g InterGormDBCli) InterSilenceRepo {
 	return &SilenceRepo{
@@ -76,12 +90,7 @@ func (sr SilenceRepo) List(tenantId, faultCenterId, query string, status string,
 }
 
 func (sr SilenceRepo) Create(r models.AlertSilences) error {
-	err := sr.g.Create(models.AlertSilences{}, r)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return sr.db.Create(&r).Error
 }
 
 func (sr SilenceRepo) Update(r models.AlertSilences) error {
@@ -99,24 +108,12 @@ func (sr SilenceRepo) Update(r models.AlertSilences) error {
 }
 
 func (sr SilenceRepo) Delete(tenantId, id string) error {
-	var silence models.AlertSilences
-	db := sr.db.Where("tenant_id = ? AND id = ?", tenantId, id)
-	err := db.First(&silence).Error
-	if err != nil {
-		return err
+	result := sr.db.Where("tenant_id = ? AND id = ?", tenantId, id).Delete(&models.AlertSilences{})
+	if result.Error != nil {
+		return result.Error
 	}
-
-	del := Delete{
-		Table: models.AlertSilences{},
-		Where: map[string]interface{}{
-			"tenant_id = ?": tenantId,
-			"id = ?":        id,
-		},
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
 	}
-	err = sr.g.Delete(del)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

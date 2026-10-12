@@ -8,6 +8,11 @@ import (
 )
 
 func Service(ctx *gin.Context, fu func() (interface{}, interface{})) {
+	// Abort stops Gin's handler chain, but not the calling handler's function.
+	// Never execute business operations after a binding failure.
+	if ctx.IsAborted() {
+		return
+	}
 	data, err := fu()
 	if err != nil {
 		logc.Error(context.Background(), err)

@@ -22,6 +22,8 @@
 
 本仓库包含特别版后端及 `web/` 配套前端，支持单条、勾选多条、设备和设备组范围的自选时间静默，并修复多条问题共用恢复事件时的恢复同步遗漏。前后端须成对升级，见 [容器升级与回滚方案](docs/container-upgrade-20261010.md)。实际密码、API Token 和运行数据不随源码发布。
 
+公网镜像发布到 **GHCR**：`ghcr.io/rumij/watchalert-backend` 和 `ghcr.io/rumij/watchalert-frontend`，支持拉取后直接更新已有容器，见 [GHCR 简洁更新说明](docs/ghcr-upgrade.md)。
+
 以下徽章展示上游项目信息。
 
 <p align="center">

@@ -44,6 +44,9 @@ func (silenceController silenceController) API(gin *gin.RouterGroup) {
 func (silenceController silenceController) Create(ctx *gin.Context) {
 	r := new(types.RequestSilenceCreate)
 	BindJson(ctx, r)
+	if ctx.IsAborted() {
+		return
+	}
 
 	tid, _ := ctx.Get("TenantID")
 	r.TenantId = tid.(string)
@@ -59,6 +62,9 @@ func (silenceController silenceController) Create(ctx *gin.Context) {
 func (silenceController silenceController) Update(ctx *gin.Context) {
 	r := new(types.RequestSilenceUpdate)
 	BindJson(ctx, r)
+	if ctx.IsAborted() {
+		return
+	}
 
 	tid, _ := ctx.Get("TenantID")
 	r.TenantId = tid.(string)
@@ -74,6 +80,9 @@ func (silenceController silenceController) Update(ctx *gin.Context) {
 func (silenceController silenceController) Delete(ctx *gin.Context) {
 	r := new(types.RequestSilenceQuery)
 	BindJson(ctx, r)
+	if ctx.IsAborted() {
+		return
+	}
 
 	tid, _ := ctx.Get("TenantID")
 	r.TenantId = tid.(string)

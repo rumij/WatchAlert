@@ -1,12 +1,69 @@
 package repo
 
 import (
+	"errors"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"testing"
 	"time"
 	"watchAlert/internal/models"
 )
+
+func TestSilenceTransactionRollsBackFailedCacheSynchronization(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() { sqlDB.Close() })
+	if err = db.AutoMigrate(&models.AlertSilences{}); err != nil {
+		t.Fatal(err)
+	}
+	store := newSilenceInterface(db, NewInterGormDBCli(db))
+	rule := models.AlertSilences{TenantId: "t", ID: "s", Name: "old"}
+	cacheErr := errors.New("cache refused write")
+	if err = store.WithTransaction(func(tx InterSilenceRepo) error {
+		if err := tx.Create(rule); err != nil {
+			return err
+		}
+		return cacheErr
+	}); !errors.Is(err, cacheErr) {
+		t.Fatalf("error = %v", err)
+	}
+	if _, err = store.Get("t", "s"); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("failed create persisted: %v", err)
+	}
+	if err = store.Create(rule); err != nil {
+		t.Fatal(err)
+	}
+	for _, op := range []string{"update", "delete"} {
+		err = store.WithTransaction(func(tx InterSilenceRepo) error {
+			var err error
+			if op == "update" {
+				changed := rule
+				changed.Name = "new"
+				err = tx.Update(changed)
+			} else {
+				err = tx.Delete("t", "s")
+			}
+			if err != nil {
+				return err
+			}
+			return cacheErr
+		})
+		if !errors.Is(err, cacheErr) {
+			t.Fatalf("%s: %v", op, err)
+		}
+		saved, err := store.Get("t", "s")
+		if err != nil || saved.Name != "old" {
+			t.Fatalf("failed %s changed state: %+v %v", op, saved, err)
+		}
+	}
+}
 
 func TestRescheduleSilencePersistsZeroValuesAndScope(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

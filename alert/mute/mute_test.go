@@ -1,6 +1,8 @@
 package mute
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 	"watchAlert/internal/cache"
@@ -10,27 +12,43 @@ import (
 
 type muteTestCache struct {
 	cache.InterEntryCache
-	rule models.AlertSilences
+	rule         models.AlertSilences
+	corruptFirst bool
 }
 
-func (c *muteTestCache) Silence() cache.SilenceCacheInterface   { return c }
-func (c *muteTestCache) GetAlertMutes(string) ([]string, error) { return []string{"s-1"}, nil }
-func (c *muteTestCache) WithIdGetMuteFromCache(string, string) (*models.AlertSilences, error) {
+func (c *muteTestCache) Silence() cache.SilenceCacheInterface { return c }
+func (c *muteTestCache) GetAlertMutes(string) ([]string, error) {
+	if c.corruptFirst {
+		return []string{"broken", "s-1"}, nil
+	}
+	return []string{"s-1"}, nil
+}
+func (c *muteTestCache) WithIdGetMuteFromCache(_ string, id string) (*models.AlertSilences, error) {
+	if id == "broken" {
+		return nil, errors.New("invalid cached JSON")
+	}
 	return &c.rule, nil
 }
-func (c *muteTestCache) PushAlertMute(models.AlertSilences) {}
-func (c *muteTestCache) RemoveAlertMute(string, string)     {}
+func (c *muteTestCache) PushAlertMute(models.AlertSilences) error { return nil }
+func (c *muteTestCache) RemoveAlertMute(string, string) error     { return nil }
 
 func TestEventSilenceScopeAndTime(t *testing.T) {
 	now := time.Now().Unix()
 	c := &muteTestCache{rule: models.AlertSilences{TenantId: "t-1", FaultCenterId: "fc-1", StartsAt: now - 10, EndsAt: now + 600, Status: 0, Labels: []models.SilenceLabel{{Key: "watchalert_fingerprint", Operator: "==", Value: "one"}}}}
 	old := ctx.Redis
+	oldContext := ctx.Ctx
 	ctx.Redis = c
-	t.Cleanup(func() { ctx.Redis = old })
+	ctx.Ctx = context.Background()
+	t.Cleanup(func() { ctx.Redis = old; ctx.Ctx = oldContext })
 	event := models.AlertCurEvent{TenantId: "t-1", FaultCenterId: "fc-1", Fingerprint: "one", Labels: map[string]interface{}{"watchalert_fingerprint": "spoofed"}}
 	if !IsSilence(ParamsForEvent(&event, nil)) {
 		t.Fatal("active single event must be muted despite stale status")
 	}
+	c.corruptFirst = true
+	if !IsSilence(ParamsForEvent(&event, nil)) {
+		t.Fatal("corrupt rule prevented a later valid rule from matching")
+	}
+	c.corruptFirst = false
 	if event.Labels["watchalert_fingerprint"] != "spoofed" {
 		t.Fatal("event labels mutated")
 	}

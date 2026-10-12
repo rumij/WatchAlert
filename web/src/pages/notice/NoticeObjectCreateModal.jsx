@@ -381,7 +381,7 @@ export const CreateNoticeObjectModal = ({ visible, onClose, selectedRow, type, h
             await createNotice(params)
             handleList()
         } catch (error) {
-            console.error(error)
+            throw error
         }
     }
 
@@ -424,7 +424,7 @@ export const CreateNoticeObjectModal = ({ visible, onClose, selectedRow, type, h
             await updateNotice(params)
             handleList()
         } catch (error) {
-            console.error(error)
+            throw error
         }
     }
 
@@ -443,7 +443,7 @@ export const CreateNoticeObjectModal = ({ visible, onClose, selectedRow, type, h
             const values = await form.validateFields()
             await handleFormSubmit(values)
         } catch (error) {
-            console.log('表单验证失败:', error)
+            console.error('通知对象保存失败:', error)
         } finally {
             setSubmitLoading(false)
         }

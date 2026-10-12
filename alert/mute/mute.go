@@ -72,7 +72,7 @@ func IsSilence(mute MuteParams) bool {
 		muteRule, err := silenceCtx.WithIdGetMuteFromCache(mute.TenantId, id)
 		if err != nil {
 			logc.Errorf(ctx.Ctx, "%v", err)
-			return false
+			continue
 		}
 
 		if muteRule == nil || muteRule.TenantId != mute.TenantId || muteRule.StatusAt(now) != 1 {

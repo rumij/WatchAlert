@@ -161,10 +161,12 @@ func pushMuteRuleToRedis() {
 				wg.Done()
 			}()
 
-			ctx.Redis.Silence().PushAlertMute(silence)
+			if err := ctx.Redis.Silence().PushAlertMute(silence); err != nil {
+				logc.Errorf(ctx.Ctx, "加载静默规则 %s 失败: %v", silence.ID, err)
+			}
 		}(silence)
 	}
 
 	wg.Wait()
-	logc.Infof(ctx.Ctx, "所有静默规则加载完毕！")
+	logc.Infof(ctx.Ctx, "静默规则加载结束")
 }

@@ -22,7 +22,7 @@ async function createNotice(params) {
         return res;
     } catch (error) {
         HandleApiError(error)
-        return error
+        throw error
     }
 }
 
@@ -36,7 +36,7 @@ async function updateNotice(params) {
         return res;
     } catch (error) {
         HandleApiError(error)
-        return error
+        throw error
     }
 }
 
