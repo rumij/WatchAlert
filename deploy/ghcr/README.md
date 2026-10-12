@@ -11,7 +11,7 @@
 | `ghcr.io/rumij/watchalert-mysql` | MySQL 和一次性初始化容器复用 | `8.0.46` |
 | `ghcr.io/rumij/watchalert-redis` | Redis | `7.4.11-alpine` |
 
-不需要单独下载 Nginx、Go、Node、Python 或构建工具镜像。speedtest 不属于 WatchAlert 的依赖。新发布的 MySQL/Redis Package 首次需由所有者设为 Public 后，其他机器才能免登录拉取。
+不需要单独下载 Nginx、Go、Node、Python 或构建工具镜像。speedtest 不属于 WatchAlert 的依赖。前后端与 MySQL/Redis Package 均已公开，可免登录拉取。
 
 ## 三步启动
 
